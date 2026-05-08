@@ -1624,10 +1624,6 @@ JPC_API JPC_PhysicsUpdateError JPC_PhysicsSystem_Update(
 JPC_API void JPC_PhysicsSystem_AddConstraint(JPC_PhysicsSystem* self, JPC_Constraint* constraint);
 JPC_API void JPC_PhysicsSystem_RemoveConstraint(JPC_PhysicsSystem* self, JPC_Constraint* constraint);
 
-// TITAN PATCH (2026-05-08): expose JPH::PhysicsSystem::SetGravity /
-// GetGravity. Wraps the matching C++ methods 1:1; pending upstream PR
-// to SecondHalfGames/JoltC. Removing this hunk is safe once upstream
-// merges + we sync our fork.
 JPC_API void JPC_PhysicsSystem_SetGravity(JPC_PhysicsSystem* self, JPC_Vec3 inGravity);
 JPC_API JPC_Vec3 JPC_PhysicsSystem_GetGravity(const JPC_PhysicsSystem* self);
 
