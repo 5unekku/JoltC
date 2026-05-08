@@ -3024,6 +3024,16 @@ JPC_API void JPC_PhysicsSystem_RemoveConstraint(JPC_PhysicsSystem* self, JPC_Con
 	to_jph(self)->RemoveConstraint(to_jph(constraint));
 }
 
+// TITAN PATCH (2026-05-08): expose JPH::PhysicsSystem::SetGravity /
+// GetGravity. Pending upstream PR to SecondHalfGames/JoltC.
+JPC_API void JPC_PhysicsSystem_SetGravity(JPC_PhysicsSystem* self, JPC_Vec3 inGravity) {
+	to_jph(self)->SetGravity(to_jph(inGravity));
+}
+
+JPC_API JPC_Vec3 JPC_PhysicsSystem_GetGravity(const JPC_PhysicsSystem* self) {
+	return to_jpc(to_jph(self)->GetGravity());
+}
+
 JPC_API JPC_BodyInterface* JPC_PhysicsSystem_GetBodyInterface(JPC_PhysicsSystem* self) {
 	return to_jpc(&to_jph(self)->GetBodyInterface());
 }
