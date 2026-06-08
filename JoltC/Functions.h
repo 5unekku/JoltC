@@ -2718,6 +2718,199 @@ JPC_API void JPC_Ragdoll_Activate(JPC_Ragdoll* self, bool inLockBodies);
 JPC_API uint JPC_Ragdoll_GetBodyCount(const JPC_Ragdoll* self);
 JPC_API JPC_BodyID JPC_Ragdoll_GetBodyID(const JPC_Ragdoll* self, uint inBodyIndex);
 
+// Ragdoll additional runtime
+JPC_API bool JPC_Ragdoll_IsActive(const JPC_Ragdoll* self, bool inLockBodies);
+JPC_API void JPC_Ragdoll_ResetWarmStart(JPC_Ragdoll* self);
+JPC_API void JPC_Ragdoll_SetGroupID(JPC_Ragdoll* self, JPC_GroupID inGroupID, bool inLockBodies);
+JPC_API void JPC_Ragdoll_SetLinearVelocity(JPC_Ragdoll* self, JPC_Vec3 inVelocity, bool inLockBodies);
+JPC_API void JPC_Ragdoll_AddLinearVelocity(JPC_Ragdoll* self, JPC_Vec3 inVelocity, bool inLockBodies);
+JPC_API void JPC_Ragdoll_AddImpulse(JPC_Ragdoll* self, JPC_Vec3 inImpulse, bool inLockBodies);
+JPC_API uint JPC_Ragdoll_GetConstraintCount(const JPC_Ragdoll* self);
+JPC_API JPC_TwoBodyConstraint* JPC_Ragdoll_GetConstraint(JPC_Ragdoll* self, uint inConstraintIndex);
+JPC_API void JPC_Ragdoll_GetBodyIDs(const JPC_Ragdoll* self, JPC_BodyID* outBodyIDs, uint* outCount);
+
+// RagdollSettings part constraints (set mToParent on an already-added part)
+JPC_API void JPC_RagdollSettings_SetPartFixedConstraint(JPC_RagdollSettings* self, uint inPartIndex, const JPC_FixedConstraintSettings* inSettings);
+JPC_API void JPC_RagdollSettings_SetPartHingeConstraint(JPC_RagdollSettings* self, uint inPartIndex, const JPC_HingeConstraintSettings* inSettings);
+JPC_API void JPC_RagdollSettings_SetPartSliderConstraint(JPC_RagdollSettings* self, uint inPartIndex, const JPC_SliderConstraintSettings* inSettings);
+JPC_API void JPC_RagdollSettings_SetPartSwingTwistConstraint(JPC_RagdollSettings* self, uint inPartIndex, const JPC_SwingTwistConstraintSettings* inSettings);
+JPC_API void JPC_RagdollSettings_SetPartPointConstraint(JPC_RagdollSettings* self, uint inPartIndex, const JPC_PointConstraintSettings* inSettings);
+
+////////////////////////////////////////////////////////////////////////////////
+// HingeConstraint runtime additions
+
+JPC_API float JPC_HingeConstraint_GetCurrentAngle(const JPC_HingeConstraint* self);
+JPC_API JPC_Vec3 JPC_HingeConstraint_GetLocalSpacePoint1(const JPC_HingeConstraint* self);
+JPC_API JPC_Vec3 JPC_HingeConstraint_GetLocalSpacePoint2(const JPC_HingeConstraint* self);
+JPC_API JPC_Vec3 JPC_HingeConstraint_GetLocalSpaceHingeAxis1(const JPC_HingeConstraint* self);
+JPC_API JPC_Vec3 JPC_HingeConstraint_GetLocalSpaceHingeAxis2(const JPC_HingeConstraint* self);
+JPC_API JPC_Vec3 JPC_HingeConstraint_GetLocalSpaceNormalAxis1(const JPC_HingeConstraint* self);
+JPC_API JPC_Vec3 JPC_HingeConstraint_GetLocalSpaceNormalAxis2(const JPC_HingeConstraint* self);
+JPC_API void JPC_HingeConstraint_SetMaxFrictionTorque(JPC_HingeConstraint* self, float inFrictionTorque);
+JPC_API float JPC_HingeConstraint_GetMaxFrictionTorque(const JPC_HingeConstraint* self);
+JPC_API JPC_MotorSettings JPC_HingeConstraint_GetMotorSettings(const JPC_HingeConstraint* self);
+JPC_API void JPC_HingeConstraint_SetMotorSettings(JPC_HingeConstraint* self, const JPC_MotorSettings* inSettings);
+JPC_API void JPC_HingeConstraint_SetTargetOrientationBS(JPC_HingeConstraint* self, JPC_Quat inOrientation);
+JPC_API void JPC_HingeConstraint_SetLimits(JPC_HingeConstraint* self, float inLimitsMin, float inLimitsMax);
+JPC_API float JPC_HingeConstraint_GetLimitsMin(const JPC_HingeConstraint* self);
+JPC_API float JPC_HingeConstraint_GetLimitsMax(const JPC_HingeConstraint* self);
+JPC_API bool JPC_HingeConstraint_HasLimits(const JPC_HingeConstraint* self);
+JPC_API JPC_SpringSettings JPC_HingeConstraint_GetLimitsSpringSettings(const JPC_HingeConstraint* self);
+JPC_API void JPC_HingeConstraint_SetLimitsSpringSettings(JPC_HingeConstraint* self, const JPC_SpringSettings* inSettings);
+
+////////////////////////////////////////////////////////////////////////////////
+// SliderConstraint runtime additions
+
+JPC_API float JPC_SliderConstraint_GetCurrentPosition(const JPC_SliderConstraint* self);
+JPC_API void JPC_SliderConstraint_SetMaxFrictionForce(JPC_SliderConstraint* self, float inFrictionForce);
+JPC_API float JPC_SliderConstraint_GetMaxFrictionForce(const JPC_SliderConstraint* self);
+JPC_API JPC_MotorSettings JPC_SliderConstraint_GetMotorSettings(const JPC_SliderConstraint* self);
+JPC_API void JPC_SliderConstraint_SetMotorSettings(JPC_SliderConstraint* self, const JPC_MotorSettings* inSettings);
+JPC_API void JPC_SliderConstraint_SetLimits(JPC_SliderConstraint* self, float inLimitsMin, float inLimitsMax);
+JPC_API float JPC_SliderConstraint_GetLimitsMin(const JPC_SliderConstraint* self);
+JPC_API float JPC_SliderConstraint_GetLimitsMax(const JPC_SliderConstraint* self);
+JPC_API bool JPC_SliderConstraint_HasLimits(const JPC_SliderConstraint* self);
+JPC_API JPC_SpringSettings JPC_SliderConstraint_GetLimitsSpringSettings(const JPC_SliderConstraint* self);
+JPC_API void JPC_SliderConstraint_SetLimitsSpringSettings(JPC_SliderConstraint* self, const JPC_SpringSettings* inSettings);
+
+////////////////////////////////////////////////////////////////////////////////
+// DistanceConstraint runtime additions
+
+JPC_API void JPC_DistanceConstraint_SetDistance(JPC_DistanceConstraint* self, float inMinDistance, float inMaxDistance);
+JPC_API float JPC_DistanceConstraint_GetMinDistance(const JPC_DistanceConstraint* self);
+JPC_API float JPC_DistanceConstraint_GetMaxDistance(const JPC_DistanceConstraint* self);
+JPC_API JPC_SpringSettings JPC_DistanceConstraint_GetLimitsSpringSettings(const JPC_DistanceConstraint* self);
+JPC_API void JPC_DistanceConstraint_SetLimitsSpringSettings(JPC_DistanceConstraint* self, const JPC_SpringSettings* inSettings);
+
+////////////////////////////////////////////////////////////////////////////////
+// PointConstraint runtime additions
+
+JPC_API void JPC_PointConstraint_SetPoint1(JPC_PointConstraint* self, JPC_ConstraintSpace inSpace, JPC_RVec3 inPoint);
+JPC_API void JPC_PointConstraint_SetPoint2(JPC_PointConstraint* self, JPC_ConstraintSpace inSpace, JPC_RVec3 inPoint);
+JPC_API JPC_Vec3 JPC_PointConstraint_GetLocalSpacePoint1(const JPC_PointConstraint* self);
+JPC_API JPC_Vec3 JPC_PointConstraint_GetLocalSpacePoint2(const JPC_PointConstraint* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// SixDOFConstraint runtime additions
+
+JPC_API bool JPC_SixDOFConstraint_IsFixedAxis(const JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis);
+JPC_API JPC_SpringSettings JPC_SixDOFConstraint_GetLimitsSpringSettings(const JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis);
+JPC_API void JPC_SixDOFConstraint_SetLimitsSpringSettings(JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis, const JPC_SpringSettings* inSettings);
+JPC_API JPC_MotorSettings JPC_SixDOFConstraint_GetMotorSettings(const JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis);
+JPC_API void JPC_SixDOFConstraint_SetMotorSettings(JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis, const JPC_MotorSettings* inSettings);
+JPC_API void JPC_SixDOFConstraint_SetMotorState(JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis, JPC_MotorState inState);
+JPC_API JPC_MotorState JPC_SixDOFConstraint_GetMotorState(const JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis);
+
+////////////////////////////////////////////////////////////////////////////////
+// SwingTwistConstraint runtime additions
+
+JPC_API JPC_Vec3 JPC_SwingTwistConstraint_GetLocalSpacePosition1(const JPC_SwingTwistConstraint* self);
+JPC_API JPC_Vec3 JPC_SwingTwistConstraint_GetLocalSpacePosition2(const JPC_SwingTwistConstraint* self);
+JPC_API JPC_Quat JPC_SwingTwistConstraint_GetConstraintToBody1(const JPC_SwingTwistConstraint* self);
+JPC_API JPC_Quat JPC_SwingTwistConstraint_GetConstraintToBody2(const JPC_SwingTwistConstraint* self);
+JPC_API JPC_MotorSettings JPC_SwingTwistConstraint_GetSwingMotorSettings(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetSwingMotorSettings(JPC_SwingTwistConstraint* self, const JPC_MotorSettings* inSettings);
+JPC_API JPC_MotorSettings JPC_SwingTwistConstraint_GetTwistMotorSettings(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetTwistMotorSettings(JPC_SwingTwistConstraint* self, const JPC_MotorSettings* inSettings);
+JPC_API void JPC_SwingTwistConstraint_SetTargetOrientationBS(JPC_SwingTwistConstraint* self, JPC_Quat inOrientation);
+
+////////////////////////////////////////////////////////////////////////////////
+// PathConstraint runtime additions
+
+JPC_API const JPC_PathConstraintPath* JPC_PathConstraint_GetPath(const JPC_PathConstraint* self);
+JPC_API JPC_MotorSettings JPC_PathConstraint_GetPositionMotorSettings(const JPC_PathConstraint* self);
+JPC_API void JPC_PathConstraint_SetPositionMotorSettings(JPC_PathConstraint* self, const JPC_MotorSettings* inSettings);
+
+////////////////////////////////////////////////////////////////////////////////
+// Vehicle wheel runtime
+
+typedef struct JPC_WheelWV JPC_WheelWV;
+
+JPC_API uint JPC_VehicleConstraint_GetWheelCount(const JPC_VehicleConstraint* self);
+JPC_API JPC_WheelWV* JPC_VehicleConstraint_GetWheel(JPC_VehicleConstraint* self, uint inIndex);
+
+JPC_API bool JPC_WheelWV_HasContact(const JPC_WheelWV* self);
+JPC_API float JPC_WheelWV_GetAngularVelocity(const JPC_WheelWV* self);
+JPC_API void JPC_WheelWV_SetAngularVelocity(JPC_WheelWV* self, float inVel);
+JPC_API float JPC_WheelWV_GetRotationAngle(const JPC_WheelWV* self);
+JPC_API void JPC_WheelWV_SetRotationAngle(JPC_WheelWV* self, float inAngle);
+JPC_API float JPC_WheelWV_GetSteerAngle(const JPC_WheelWV* self);
+JPC_API void JPC_WheelWV_SetSteerAngle(JPC_WheelWV* self, float inAngle);
+JPC_API JPC_BodyID JPC_WheelWV_GetContactBodyID(const JPC_WheelWV* self);
+JPC_API JPC_RVec3 JPC_WheelWV_GetContactPosition(const JPC_WheelWV* self);
+JPC_API JPC_Vec3 JPC_WheelWV_GetContactNormal(const JPC_WheelWV* self);
+JPC_API JPC_Vec3 JPC_WheelWV_GetContactPointVelocity(const JPC_WheelWV* self);
+JPC_API JPC_Vec3 JPC_WheelWV_GetContactLongitudinal(const JPC_WheelWV* self);
+JPC_API JPC_Vec3 JPC_WheelWV_GetContactLateral(const JPC_WheelWV* self);
+JPC_API float JPC_WheelWV_GetSuspensionLength(const JPC_WheelWV* self);
+JPC_API float JPC_WheelWV_GetSuspensionLambda(const JPC_WheelWV* self);
+JPC_API float JPC_WheelWV_GetLongitudinalLambda(const JPC_WheelWV* self);
+JPC_API float JPC_WheelWV_GetLateralLambda(const JPC_WheelWV* self);
+
+// WheeledVehicleController individual input getters/setters
+JPC_API void JPC_WheeledVehicleController_SetForwardInput(JPC_WheeledVehicleController* self, float inForward);
+JPC_API float JPC_WheeledVehicleController_GetForwardInput(const JPC_WheeledVehicleController* self);
+JPC_API void JPC_WheeledVehicleController_SetRightInput(JPC_WheeledVehicleController* self, float inRight);
+JPC_API float JPC_WheeledVehicleController_GetRightInput(const JPC_WheeledVehicleController* self);
+JPC_API void JPC_WheeledVehicleController_SetBrakeInput(JPC_WheeledVehicleController* self, float inBrake);
+JPC_API float JPC_WheeledVehicleController_GetBrakeInput(const JPC_WheeledVehicleController* self);
+JPC_API void JPC_WheeledVehicleController_SetHandBrakeInput(JPC_WheeledVehicleController* self, float inHandBrake);
+JPC_API float JPC_WheeledVehicleController_GetHandBrakeInput(const JPC_WheeledVehicleController* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// SoftBody additional constraint types
+
+typedef struct {
+	uint32_t Vertex[4];
+	float Compliance;
+	float InitialAngle;
+} JPC_SoftBodyDihedralBend;
+
+typedef struct {
+	uint32_t Vertex[4];
+	float SixRestVolume;
+	float Compliance;
+} JPC_SoftBodyVolume;
+
+typedef struct {
+	uint32_t InvBindIndex;
+	float Weight;
+} JPC_SoftBodySkinWeight;
+
+typedef struct {
+	uint32_t Vertex;
+	JPC_SoftBodySkinWeight Weights[4];
+	float MaxDistance;
+	float BackStopDistance;
+	float BackStopRadius;
+} JPC_SoftBodySkinned;
+
+typedef struct {
+	uint32_t JointIndex;
+	JPC_Mat44 InvBind;
+} JPC_SoftBodyInvBind;
+
+typedef struct {
+	uint32_t Vertex[2];
+	float MaxDistance;
+} JPC_SoftBodyLRA;
+
+JPC_API void JPC_SoftBodySharedSettings_AddDihedralBend(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyDihedralBend* inBend);
+JPC_API void JPC_SoftBodySharedSettings_AddVolumeConstraint(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyVolume* inVolume);
+JPC_API void JPC_SoftBodySharedSettings_AddSkinned(JPC_SoftBodySharedSettings* self, const JPC_SoftBodySkinned* inSkinned);
+JPC_API void JPC_SoftBodySharedSettings_AddInvBind(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyInvBind* inInvBind);
+JPC_API void JPC_SoftBodySharedSettings_AddLRA(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyLRA* inLRA);
+JPC_API void JPC_SoftBodySharedSettings_CalculateEdgeLengths(JPC_SoftBodySharedSettings* self);
+JPC_API void JPC_SoftBodySharedSettings_CalculateBendConstraintConstants(JPC_SoftBodySharedSettings* self);
+JPC_API void JPC_SoftBodySharedSettings_CalculateVolumeConstraintVolumes(JPC_SoftBodySharedSettings* self);
+JPC_API void JPC_SoftBodySharedSettings_CalculateLRALengths(JPC_SoftBodySharedSettings* self, float inMaxDistanceMultiplier);
+JPC_API void JPC_SoftBodySharedSettings_CalculateSkinnedConstraintNormals(JPC_SoftBodySharedSettings* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// PhysicsMaterial default
+
+JPC_API const JPC_PhysicsMaterial* JPC_PhysicsMaterial_GetDefault();
+
 #ifdef __cplusplus
 }
 #endif
