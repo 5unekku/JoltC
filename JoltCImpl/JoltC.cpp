@@ -1274,8 +1274,14 @@ JPC_IMPL void JPC_ConstraintSettings_to_jph(
 }
 
 JPC_API void JPC_ConstraintSettings_default(JPC_ConstraintSettings* settings) {
-	JPH::ConstraintSettings defaultSettings{};
-	JPC_ConstraintSettings_to_jpc(settings, &defaultSettings);
+	// ConstraintSettings default constructor is protected in 5.5.0+, so we
+	// hardcode the defaults from Constraint.h directly.
+	settings->Enabled = true;
+	settings->ConstraintPriority = 0;
+	settings->NumVelocityStepsOverride = 0;
+	settings->NumPositionStepsOverride = 0;
+	settings->DrawConstraintSize = 1.0f;
+	settings->UserData = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

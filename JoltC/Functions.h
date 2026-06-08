@@ -713,6 +713,9 @@ typedef struct JPC_BodyManager_DrawSettings {
 	bool mDrawSoftBodyVolumeConstraints;
 	bool mDrawSoftBodySkinConstraints;
 	bool mDrawSoftBodyLRAConstraints;
+	bool mDrawSoftBodyRods;
+	bool mDrawSoftBodyRodStates;
+	bool mDrawSoftBodyRodBendTwistConstraints;
 	bool mDrawSoftBodyPredictedBounds;
 	JPC_SoftBodyConstraintColor DrawSoftBodyConstraintColor;
 } JPC_BodyManager_DrawSettings;
