@@ -39,6 +39,9 @@
 
 #include <Jolt/Renderer/DebugRendererSimple.h>
 
+#include <Jolt/Physics/Character/Character.h>
+#include <Jolt/Physics/Character/CharacterVirtual.h>
+
 #include <JoltC/JoltC.h>
 
 #define JPC_IMPL static
@@ -3123,4 +3126,459 @@ JPC_API void JPC_PhysicsSystem_SetContactListener(
 	JPC_ContactListener* inContactListener)
 {
 	to_jph(self)->SetContactListener(to_jph(inContactListener));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Character
+
+OPAQUE_WRAPPER(JPC_Character, JPH::Character)
+
+static JPH::CharacterSettings to_jph_char_settings(const JPC_CharacterSettings* s) {
+	JPH::CharacterSettings cs;
+	cs.mUp = to_jph(s->Up);
+	cs.mSupportingVolume = JPH::Plane(JPH::Vec3(s->SupportingVolume.x, s->SupportingVolume.y, s->SupportingVolume.z), s->SupportingVolume.w);
+	cs.mMaxSlopeAngle = s->MaxSlopeAngle;
+	cs.mEnhancedInternalEdgeRemoval = s->EnhancedInternalEdgeRemoval;
+	cs.mShape = to_jph(s->Shape);
+	cs.mLayer = s->Layer;
+	cs.mMass = s->Mass;
+	cs.mFriction = s->Friction;
+	cs.mGravityFactor = s->GravityFactor;
+	cs.mAllowedDOFs = to_jph(s->AllowedDOFs);
+	return cs;
+}
+
+JPC_API void JPC_CharacterSettings_default(JPC_CharacterSettings* settings) {
+	JPH::CharacterSettings d;
+	settings->Up = to_jpc(d.mUp);
+	settings->SupportingVolume = { d.mSupportingVolume.GetNormal().GetX(), d.mSupportingVolume.GetNormal().GetY(), d.mSupportingVolume.GetNormal().GetZ(), d.mSupportingVolume.GetConstant() };
+	settings->MaxSlopeAngle = d.mMaxSlopeAngle;
+	settings->EnhancedInternalEdgeRemoval = d.mEnhancedInternalEdgeRemoval;
+	settings->Shape = nullptr;
+	settings->Layer = d.mLayer;
+	settings->Mass = d.mMass;
+	settings->Friction = d.mFriction;
+	settings->GravityFactor = d.mGravityFactor;
+	settings->AllowedDOFs = to_jpc(d.mAllowedDOFs);
+}
+
+JPC_API JPC_Character* JPC_Character_new(
+	const JPC_CharacterSettings* inSettings,
+	JPC_RVec3 inPosition,
+	JPC_Quat inRotation,
+	uint64_t inUserData,
+	JPC_PhysicsSystem* inSystem)
+{
+	JPH::CharacterSettings cs = to_jph_char_settings(inSettings);
+	return to_jpc(new JPH::Character(&cs, to_jph(inPosition), to_jph(inRotation), inUserData, to_jph(inSystem)));
+}
+
+DESTRUCTOR(JPC_Character)
+
+JPC_API void JPC_Character_AddToPhysicsSystem(JPC_Character* self, JPC_Activation inActivationMode, bool inLockBodies) {
+	to_jph(self)->AddToPhysicsSystem(to_jph(inActivationMode), inLockBodies);
+}
+
+JPC_API void JPC_Character_RemoveFromPhysicsSystem(JPC_Character* self, bool inLockBodies) {
+	to_jph(self)->RemoveFromPhysicsSystem(inLockBodies);
+}
+
+JPC_API void JPC_Character_Activate(JPC_Character* self, bool inLockBodies) {
+	to_jph(self)->Activate(inLockBodies);
+}
+
+JPC_API void JPC_Character_PostSimulation(JPC_Character* self, float inMaxSeparationDistance, bool inLockBodies) {
+	to_jph(self)->PostSimulation(inMaxSeparationDistance, inLockBodies);
+}
+
+JPC_API JPC_Vec3 JPC_Character_GetLinearVelocity(const JPC_Character* self, bool inLockBodies) {
+	return to_jpc(to_jph(self)->GetLinearVelocity(inLockBodies));
+}
+
+JPC_API void JPC_Character_SetLinearVelocity(JPC_Character* self, JPC_Vec3 inLinearVelocity, bool inLockBodies) {
+	to_jph(self)->SetLinearVelocity(to_jph(inLinearVelocity), inLockBodies);
+}
+
+JPC_API void JPC_Character_AddLinearVelocity(JPC_Character* self, JPC_Vec3 inLinearVelocity, bool inLockBodies) {
+	to_jph(self)->AddLinearVelocity(to_jph(inLinearVelocity), inLockBodies);
+}
+
+JPC_API JPC_BodyID JPC_Character_GetBodyID(const JPC_Character* self) {
+	return to_jpc(to_jph(self)->GetBodyID());
+}
+
+JPC_API JPC_RVec3 JPC_Character_GetPosition(const JPC_Character* self, bool inLockBodies) {
+	return to_jpc(to_jph(self)->GetPosition(inLockBodies));
+}
+
+JPC_API void JPC_Character_SetPosition(JPC_Character* self, JPC_RVec3 inPosition, JPC_Activation inActivationMode, bool inLockBodies) {
+	to_jph(self)->SetPosition(to_jph(inPosition), to_jph(inActivationMode), inLockBodies);
+}
+
+JPC_API JPC_Quat JPC_Character_GetRotation(const JPC_Character* self, bool inLockBodies) {
+	return to_jpc(to_jph(self)->GetRotation(inLockBodies));
+}
+
+JPC_API void JPC_Character_SetRotation(JPC_Character* self, JPC_Quat inRotation, JPC_Activation inActivationMode, bool inLockBodies) {
+	to_jph(self)->SetRotation(to_jph(inRotation), to_jph(inActivationMode), inLockBodies);
+}
+
+JPC_API JPC_RVec3 JPC_Character_GetCenterOfMassPosition(const JPC_Character* self, bool inLockBodies) {
+	return to_jpc(to_jph(self)->GetCenterOfMassPosition(inLockBodies));
+}
+
+JPC_API JPC_GroundState JPC_Character_GetGroundState(const JPC_Character* self) {
+	return static_cast<JPC_GroundState>(to_jph(self)->GetGroundState());
+}
+
+JPC_API bool JPC_Character_IsSupported(const JPC_Character* self) {
+	return to_jph(self)->IsSupported();
+}
+
+JPC_API JPC_RVec3 JPC_Character_GetGroundPosition(const JPC_Character* self) {
+	return to_jpc(to_jph(self)->GetGroundPosition());
+}
+
+JPC_API JPC_Vec3 JPC_Character_GetGroundNormal(const JPC_Character* self) {
+	return to_jpc(to_jph(self)->GetGroundNormal());
+}
+
+JPC_API JPC_Vec3 JPC_Character_GetGroundVelocity(const JPC_Character* self) {
+	return to_jpc(to_jph(self)->GetGroundVelocity());
+}
+
+JPC_API JPC_BodyID JPC_Character_GetGroundBodyID(const JPC_Character* self) {
+	return to_jpc(to_jph(self)->GetGroundBodyID());
+}
+
+JPC_API uint64_t JPC_Character_GetGroundUserData(const JPC_Character* self) {
+	return to_jph(self)->GetGroundUserData();
+}
+
+JPC_API JPC_ObjectLayer JPC_Character_GetLayer(const JPC_Character* self) {
+	return to_jph(self)->GetLayer();
+}
+
+JPC_API void JPC_Character_SetLayer(JPC_Character* self, JPC_ObjectLayer inLayer, bool inLockBodies) {
+	to_jph(self)->SetLayer(inLayer, inLockBodies);
+}
+
+JPC_API void JPC_Character_SetUp(JPC_Character* self, JPC_Vec3 inUp) {
+	to_jph(self)->SetUp(to_jph(inUp));
+}
+
+JPC_API JPC_Vec3 JPC_Character_GetUp(const JPC_Character* self) {
+	return to_jpc(to_jph(self)->GetUp());
+}
+
+JPC_API bool JPC_Character_SetShape(JPC_Character* self, const JPC_Shape* inShape, float inMaxPenetrationDepth, bool inLockBodies) {
+	return to_jph(self)->SetShape(to_jph(inShape), inMaxPenetrationDepth, inLockBodies);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// CharacterVirtual
+
+OPAQUE_WRAPPER(JPC_CharacterVirtual, JPH::CharacterVirtual)
+
+static JPH::CharacterVirtualSettings to_jph_char_virtual_settings(const JPC_CharacterVirtualSettings* s) {
+	JPH::CharacterVirtualSettings cs;
+	cs.mUp = to_jph(s->Up);
+	cs.mSupportingVolume = JPH::Plane(JPH::Vec3(s->SupportingVolume.x, s->SupportingVolume.y, s->SupportingVolume.z), s->SupportingVolume.w);
+	cs.mMaxSlopeAngle = s->MaxSlopeAngle;
+	cs.mEnhancedInternalEdgeRemoval = s->EnhancedInternalEdgeRemoval;
+	cs.mShape = to_jph(s->Shape);
+	cs.mID = JPH::CharacterID(s->ID);
+	cs.mMass = s->Mass;
+	cs.mMaxStrength = s->MaxStrength;
+	cs.mShapeOffset = to_jph(s->ShapeOffset);
+	cs.mBackFaceMode = static_cast<JPH::EBackFaceMode>(s->BackFaceMode);
+	cs.mPredictiveContactDistance = s->PredictiveContactDistance;
+	cs.mMaxCollisionIterations = s->MaxCollisionIterations;
+	cs.mMaxConstraintIterations = s->MaxConstraintIterations;
+	cs.mMinTimeRemaining = s->MinTimeRemaining;
+	cs.mCollisionTolerance = s->CollisionTolerance;
+	cs.mCharacterPadding = s->CharacterPadding;
+	cs.mMaxNumHits = s->MaxNumHits;
+	cs.mHitReductionCosMaxAngle = s->HitReductionCosMaxAngle;
+	cs.mPenetrationRecoverySpeed = s->PenetrationRecoverySpeed;
+	cs.mInnerBodyShape = to_jph(s->InnerBodyShape);
+	cs.mInnerBodyIDOverride = to_jph(s->InnerBodyIDOverride);
+	cs.mInnerBodyLayer = s->InnerBodyLayer;
+	return cs;
+}
+
+JPC_API void JPC_CharacterVirtualSettings_default(JPC_CharacterVirtualSettings* settings) {
+	JPH::CharacterVirtualSettings d;
+	settings->Up = to_jpc(d.mUp);
+	settings->SupportingVolume = { d.mSupportingVolume.GetNormal().GetX(), d.mSupportingVolume.GetNormal().GetY(), d.mSupportingVolume.GetNormal().GetZ(), d.mSupportingVolume.GetConstant() };
+	settings->MaxSlopeAngle = d.mMaxSlopeAngle;
+	settings->EnhancedInternalEdgeRemoval = d.mEnhancedInternalEdgeRemoval;
+	settings->Shape = nullptr;
+	settings->ID = d.mID.GetValue();
+	settings->Mass = d.mMass;
+	settings->MaxStrength = d.mMaxStrength;
+	settings->ShapeOffset = to_jpc(d.mShapeOffset);
+	settings->BackFaceMode = static_cast<JPC_BackFaceMode>(d.mBackFaceMode);
+	settings->PredictiveContactDistance = d.mPredictiveContactDistance;
+	settings->MaxCollisionIterations = d.mMaxCollisionIterations;
+	settings->MaxConstraintIterations = d.mMaxConstraintIterations;
+	settings->MinTimeRemaining = d.mMinTimeRemaining;
+	settings->CollisionTolerance = d.mCollisionTolerance;
+	settings->CharacterPadding = d.mCharacterPadding;
+	settings->MaxNumHits = d.mMaxNumHits;
+	settings->HitReductionCosMaxAngle = d.mHitReductionCosMaxAngle;
+	settings->PenetrationRecoverySpeed = d.mPenetrationRecoverySpeed;
+	settings->InnerBodyShape = nullptr;
+	settings->InnerBodyIDOverride = to_jpc(d.mInnerBodyIDOverride);
+	settings->InnerBodyLayer = d.mInnerBodyLayer;
+}
+
+JPC_API JPC_CharacterVirtual* JPC_CharacterVirtual_new(
+	const JPC_CharacterVirtualSettings* inSettings,
+	JPC_RVec3 inPosition,
+	JPC_Quat inRotation,
+	uint64_t inUserData,
+	JPC_PhysicsSystem* inSystem)
+{
+	JPH::CharacterVirtualSettings cs = to_jph_char_virtual_settings(inSettings);
+	return to_jpc(new JPH::CharacterVirtual(&cs, to_jph(inPosition), to_jph(inRotation), inUserData, to_jph(inSystem)));
+}
+
+DESTRUCTOR(JPC_CharacterVirtual)
+
+JPC_API JPC_CharacterID JPC_CharacterVirtual_GetID(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetID().GetValue();
+}
+
+JPC_API JPC_Vec3 JPC_CharacterVirtual_GetLinearVelocity(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetLinearVelocity());
+}
+
+JPC_API void JPC_CharacterVirtual_SetLinearVelocity(JPC_CharacterVirtual* self, JPC_Vec3 inLinearVelocity) {
+	to_jph(self)->SetLinearVelocity(to_jph(inLinearVelocity));
+}
+
+JPC_API JPC_RVec3 JPC_CharacterVirtual_GetPosition(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetPosition());
+}
+
+JPC_API void JPC_CharacterVirtual_SetPosition(JPC_CharacterVirtual* self, JPC_RVec3 inPosition) {
+	to_jph(self)->SetPosition(to_jph(inPosition));
+}
+
+JPC_API JPC_Quat JPC_CharacterVirtual_GetRotation(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetRotation());
+}
+
+JPC_API void JPC_CharacterVirtual_SetRotation(JPC_CharacterVirtual* self, JPC_Quat inRotation) {
+	to_jph(self)->SetRotation(to_jph(inRotation));
+}
+
+JPC_API JPC_RVec3 JPC_CharacterVirtual_GetCenterOfMassPosition(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetCenterOfMassPosition());
+}
+
+JPC_API float JPC_CharacterVirtual_GetMass(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetMass();
+}
+
+JPC_API void JPC_CharacterVirtual_SetMass(JPC_CharacterVirtual* self, float inMass) {
+	to_jph(self)->SetMass(inMass);
+}
+
+JPC_API float JPC_CharacterVirtual_GetMaxStrength(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetMaxStrength();
+}
+
+JPC_API void JPC_CharacterVirtual_SetMaxStrength(JPC_CharacterVirtual* self, float inMaxStrength) {
+	to_jph(self)->SetMaxStrength(inMaxStrength);
+}
+
+JPC_API float JPC_CharacterVirtual_GetPenetrationRecoverySpeed(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetPenetrationRecoverySpeed();
+}
+
+JPC_API void JPC_CharacterVirtual_SetPenetrationRecoverySpeed(JPC_CharacterVirtual* self, float inSpeed) {
+	to_jph(self)->SetPenetrationRecoverySpeed(inSpeed);
+}
+
+JPC_API bool JPC_CharacterVirtual_GetEnhancedInternalEdgeRemoval(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetEnhancedInternalEdgeRemoval();
+}
+
+JPC_API void JPC_CharacterVirtual_SetEnhancedInternalEdgeRemoval(JPC_CharacterVirtual* self, bool inApply) {
+	to_jph(self)->SetEnhancedInternalEdgeRemoval(inApply);
+}
+
+JPC_API float JPC_CharacterVirtual_GetCharacterPadding(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetCharacterPadding();
+}
+
+JPC_API uint JPC_CharacterVirtual_GetMaxNumHits(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetMaxNumHits();
+}
+
+JPC_API void JPC_CharacterVirtual_SetMaxNumHits(JPC_CharacterVirtual* self, uint inMaxHits) {
+	to_jph(self)->SetMaxNumHits(inMaxHits);
+}
+
+JPC_API float JPC_CharacterVirtual_GetHitReductionCosMaxAngle(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetHitReductionCosMaxAngle();
+}
+
+JPC_API void JPC_CharacterVirtual_SetHitReductionCosMaxAngle(JPC_CharacterVirtual* self, float inCosMaxAngle) {
+	to_jph(self)->SetHitReductionCosMaxAngle(inCosMaxAngle);
+}
+
+JPC_API bool JPC_CharacterVirtual_GetMaxHitsExceeded(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetMaxHitsExceeded();
+}
+
+JPC_API uint64_t JPC_CharacterVirtual_GetUserData(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetUserData();
+}
+
+JPC_API void JPC_CharacterVirtual_SetUserData(JPC_CharacterVirtual* self, uint64_t inUserData) {
+	to_jph(self)->SetUserData(inUserData);
+}
+
+JPC_API JPC_BodyID JPC_CharacterVirtual_GetInnerBodyID(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetInnerBodyID());
+}
+
+JPC_API void JPC_CharacterVirtual_SetUp(JPC_CharacterVirtual* self, JPC_Vec3 inUp) {
+	to_jph(self)->SetUp(to_jph(inUp));
+}
+
+JPC_API JPC_Vec3 JPC_CharacterVirtual_GetUp(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetUp());
+}
+
+JPC_API JPC_GroundState JPC_CharacterVirtual_GetGroundState(const JPC_CharacterVirtual* self) {
+	return static_cast<JPC_GroundState>(to_jph(self)->GetGroundState());
+}
+
+JPC_API bool JPC_CharacterVirtual_IsSupported(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->IsSupported();
+}
+
+JPC_API JPC_RVec3 JPC_CharacterVirtual_GetGroundPosition(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetGroundPosition());
+}
+
+JPC_API JPC_Vec3 JPC_CharacterVirtual_GetGroundNormal(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetGroundNormal());
+}
+
+JPC_API JPC_Vec3 JPC_CharacterVirtual_GetGroundVelocity(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetGroundVelocity());
+}
+
+JPC_API JPC_BodyID JPC_CharacterVirtual_GetGroundBodyID(const JPC_CharacterVirtual* self) {
+	return to_jpc(to_jph(self)->GetGroundBodyID());
+}
+
+JPC_API uint64_t JPC_CharacterVirtual_GetGroundUserData(const JPC_CharacterVirtual* self) {
+	return to_jph(self)->GetGroundUserData();
+}
+
+JPC_API JPC_Vec3 JPC_CharacterVirtual_CancelVelocityTowardsSteepSlopes(const JPC_CharacterVirtual* self, JPC_Vec3 inDesiredVelocity) {
+	return to_jpc(to_jph(self)->CancelVelocityTowardsSteepSlopes(to_jph(inDesiredVelocity)));
+}
+
+JPC_API void JPC_ExtendedUpdateSettings_default(JPC_ExtendedUpdateSettings* settings) {
+	JPH::CharacterVirtual::ExtendedUpdateSettings d;
+	settings->StickToFloorStepDown = to_jpc(d.mStickToFloorStepDown);
+	settings->WalkStairsStepUp = to_jpc(d.mWalkStairsStepUp);
+	settings->WalkStairsMinStepForward = d.mWalkStairsMinStepForward;
+	settings->WalkStairsStepForwardTest = d.mWalkStairsStepForwardTest;
+	settings->WalkStairsCosAngleForwardContact = d.mWalkStairsCosAngleForwardContact;
+	settings->WalkStairsStepDownExtra = to_jpc(d.mWalkStairsStepDownExtra);
+}
+
+static JPH::CharacterVirtual::ExtendedUpdateSettings to_jph_extended_settings(const JPC_ExtendedUpdateSettings* s) {
+	JPH::CharacterVirtual::ExtendedUpdateSettings out;
+	out.mStickToFloorStepDown = to_jph(s->StickToFloorStepDown);
+	out.mWalkStairsStepUp = to_jph(s->WalkStairsStepUp);
+	out.mWalkStairsMinStepForward = s->WalkStairsMinStepForward;
+	out.mWalkStairsStepForwardTest = s->WalkStairsStepForwardTest;
+	out.mWalkStairsCosAngleForwardContact = s->WalkStairsCosAngleForwardContact;
+	out.mWalkStairsStepDownExtra = to_jph(s->WalkStairsStepDownExtra);
+	return out;
+}
+
+JPC_API void JPC_CharacterVirtual_Update(JPC_CharacterVirtual* self, JPC_CharacterVirtual_UpdateArgs* args) {
+	to_jph(self)->Update(
+		args->DeltaTime,
+		to_jph(args->Gravity),
+		*to_jph(args->BroadPhaseLayerFilter),
+		*to_jph(args->ObjectLayerFilter),
+		*to_jph(args->BodyFilter),
+		*to_jph(args->ShapeFilter),
+		*to_jph(args->TempAllocator));
+}
+
+JPC_API bool JPC_CharacterVirtual_CanWalkStairs(const JPC_CharacterVirtual* self, JPC_Vec3 inLinearVelocity) {
+	return to_jph(self)->CanWalkStairs(to_jph(inLinearVelocity));
+}
+
+JPC_API bool JPC_CharacterVirtual_WalkStairs(JPC_CharacterVirtual* self, JPC_CharacterVirtual_WalkStairsArgs* args) {
+	return to_jph(self)->WalkStairs(
+		args->DeltaTime,
+		to_jph(args->StepUp),
+		to_jph(args->StepForward),
+		to_jph(args->StepForwardTest),
+		to_jph(args->StepDownExtra),
+		*to_jph(args->BroadPhaseLayerFilter),
+		*to_jph(args->ObjectLayerFilter),
+		*to_jph(args->BodyFilter),
+		*to_jph(args->ShapeFilter),
+		*to_jph(args->TempAllocator));
+}
+
+JPC_API bool JPC_CharacterVirtual_StickToFloor(JPC_CharacterVirtual* self, JPC_CharacterVirtual_StickToFloorArgs* args) {
+	return to_jph(self)->StickToFloor(
+		to_jph(args->StepDown),
+		*to_jph(args->BroadPhaseLayerFilter),
+		*to_jph(args->ObjectLayerFilter),
+		*to_jph(args->BodyFilter),
+		*to_jph(args->ShapeFilter),
+		*to_jph(args->TempAllocator));
+}
+
+JPC_API void JPC_CharacterVirtual_ExtendedUpdate(JPC_CharacterVirtual* self, JPC_CharacterVirtual_ExtendedUpdateArgs* args) {
+	auto settings = to_jph_extended_settings(&args->Settings);
+	to_jph(self)->ExtendedUpdate(
+		args->DeltaTime,
+		to_jph(args->Gravity),
+		settings,
+		*to_jph(args->BroadPhaseLayerFilter),
+		*to_jph(args->ObjectLayerFilter),
+		*to_jph(args->BodyFilter),
+		*to_jph(args->ShapeFilter),
+		*to_jph(args->TempAllocator));
+}
+
+JPC_API void JPC_CharacterVirtual_RefreshContacts(JPC_CharacterVirtual* self, JPC_CharacterVirtual_RefreshContactsArgs* args) {
+	to_jph(self)->RefreshContacts(
+		*to_jph(args->BroadPhaseLayerFilter),
+		*to_jph(args->ObjectLayerFilter),
+		*to_jph(args->BodyFilter),
+		*to_jph(args->ShapeFilter),
+		*to_jph(args->TempAllocator));
+}
+
+JPC_API void JPC_CharacterVirtual_UpdateGroundVelocity(JPC_CharacterVirtual* self) {
+	to_jph(self)->UpdateGroundVelocity();
+}
+
+JPC_API bool JPC_CharacterVirtual_SetShape(JPC_CharacterVirtual* self, JPC_CharacterVirtual_SetShapeArgs* args) {
+	return to_jph(self)->SetShape(
+		to_jph(args->Shape),
+		args->MaxPenetrationDepth,
+		*to_jph(args->BroadPhaseLayerFilter),
+		*to_jph(args->ObjectLayerFilter),
+		*to_jph(args->BodyFilter),
+		*to_jph(args->ShapeFilter),
+		*to_jph(args->TempAllocator));
 }
