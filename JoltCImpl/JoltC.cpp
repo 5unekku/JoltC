@@ -5741,8 +5741,146 @@ JPC_API void JPC_SoftBodySharedSettings_CalculateSkinnedConstraintNormals(JPC_So
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// PhysicsMaterial default
+// PhysicsMaterial default + custom bridge
 
 JPC_API const JPC_PhysicsMaterial* JPC_PhysicsMaterial_GetDefault() {
 	return to_jpc(JPH::PhysicsMaterial::sDefault.GetPtr());
+}
+
+class JPC_PhysicsMaterialBridge final : public JPH::PhysicsMaterial {
+public:
+	void* mUserData;
+	JPC_PhysicsMaterialFns mFns;
+
+	JPC_PhysicsMaterialBridge(void* inUserData, JPC_PhysicsMaterialFns inFns)
+		: mUserData(inUserData), mFns(inFns) {}
+
+	virtual const char* GetDebugName() const override {
+		if (mFns.GetDebugName)
+			return mFns.GetDebugName(mUserData);
+		return "Custom";
+	}
+
+	virtual JPH::Color GetDebugColor() const override {
+		if (mFns.GetDebugColor) {
+			JPC_Color c = mFns.GetDebugColor(mUserData);
+			return JPH::Color(c.r, c.g, c.b, c.a);
+		}
+		return JPH::Color::sGrey;
+	}
+};
+
+JPC_API JPC_PhysicsMaterial* JPC_PhysicsMaterial_new(void* inUserData, JPC_PhysicsMaterialFns inFns) {
+	auto* bridge = new JPC_PhysicsMaterialBridge(inUserData, inFns);
+	bridge->AddRef();
+	return to_jpc(static_cast<JPH::PhysicsMaterial*>(bridge));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ConstraintSettingsObj — opaque handle for constraint settings returned at runtime
+
+OPAQUE_WRAPPER(JPC_ConstraintSettingsObj, JPH::ConstraintSettings)
+
+JPC_API JPC_ConstraintSettingsObj* JPC_Constraint_GetConstraintSettings(const JPC_Constraint* self) {
+	JPH::Ref<JPH::ConstraintSettings> ref = to_jph(self)->GetConstraintSettings();
+	JPH::ConstraintSettings* raw = ref.GetPtr();
+	if (raw)
+		raw->AddRef();
+	return to_jpc(raw);
+}
+
+JPC_API void JPC_ConstraintSettingsObj_AddRef(const JPC_ConstraintSettingsObj* self) {
+	const_cast<JPH::ConstraintSettings*>(to_jph(self))->AddRef();
+}
+
+JPC_API void JPC_ConstraintSettingsObj_Release(const JPC_ConstraintSettingsObj* self) {
+	const_cast<JPH::ConstraintSettings*>(to_jph(self))->Release();
+}
+
+JPC_API JPC_ConstraintSettings JPC_ConstraintSettingsObj_GetBaseSettings(const JPC_ConstraintSettingsObj* self) {
+	JPC_ConstraintSettings out;
+	JPC_ConstraintSettings_to_jpc(&out, to_jph(self));
+	return out;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Ragdoll pose (matrix overloads)
+
+JPC_API void JPC_Ragdoll_SetPose(JPC_Ragdoll* self, JPC_RVec3 inRootOffset, const JPC_Mat44* inJointMatrices, uint32_t inCount, bool inLockBodies) {
+	to_jph(self)->SetPose(
+		JPH::RVec3(inRootOffset.x, inRootOffset.y, inRootOffset.z),
+		reinterpret_cast<const JPH::Mat44*>(inJointMatrices),
+		inLockBodies);
+	(void)inCount;
+}
+
+JPC_API void JPC_Ragdoll_GetPose(JPC_Ragdoll* self, JPC_RVec3* outRootOffset, JPC_Mat44* outJointMatrices, uint32_t inCount, bool inLockBodies) {
+	JPH::RVec3 rootOffset;
+	to_jph(self)->GetPose(rootOffset, reinterpret_cast<JPH::Mat44*>(outJointMatrices), inLockBodies);
+	outRootOffset->x = rootOffset.GetX();
+	outRootOffset->y = rootOffset.GetY();
+	outRootOffset->z = rootOffset.GetZ();
+	(void)inCount;
+}
+
+JPC_API void JPC_Ragdoll_DriveToPoseUsingKinematics(JPC_Ragdoll* self, JPC_RVec3 inRootOffset, const JPC_Mat44* inJointMatrices, uint32_t inCount, float inDeltaTime, bool inLockBodies) {
+	to_jph(self)->DriveToPoseUsingKinematics(
+		JPH::RVec3(inRootOffset.x, inRootOffset.y, inRootOffset.z),
+		reinterpret_cast<const JPH::Mat44*>(inJointMatrices),
+		inDeltaTime,
+		inLockBodies);
+	(void)inCount;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SoftBodySharedSettings — CreateConstraints + material assignment
+
+JPC_API void JPC_SoftBodySharedSettings_CreateConstraints(
+	JPC_SoftBodySharedSettings* self,
+	const JPC_SoftBodyVertexAttributes* inVertexAttributes,
+	uint32_t inVertexAttributesCount,
+	JPC_SoftBodyEBendType inBendType,
+	float inAngleTolerance)
+{
+	static_assert(sizeof(JPC_SoftBodyVertexAttributes) == sizeof(JPH::SoftBodySharedSettings::VertexAttributes));
+	to_jph(self)->CreateConstraints(
+		reinterpret_cast<const JPH::SoftBodySharedSettings::VertexAttributes*>(inVertexAttributes),
+		inVertexAttributesCount,
+		static_cast<JPH::SoftBodySharedSettings::EBendType>(inBendType),
+		inAngleTolerance);
+}
+
+JPC_API void JPC_SoftBodySharedSettings_AddMaterial(JPC_SoftBodySharedSettings* self, const JPC_PhysicsMaterial* inMaterial) {
+	to_jph(self)->mMaterials.push_back(const_cast<JPH::PhysicsMaterial*>(to_jph(inMaterial)));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleConstraint wheel transform helpers
+
+JPC_API void JPC_VehicleConstraint_GetWheelLocalBasis(const JPC_VehicleConstraint* self, uint32_t inWheelIndex, JPC_Vec3* outForward, JPC_Vec3* outUp, JPC_Vec3* outRight) {
+	JPH::Vec3 forward, up, right;
+	to_jph(self)->GetWheelLocalBasis(to_jph(self)->GetWheel(inWheelIndex), forward, up, right);
+	*outForward = { forward.GetX(), forward.GetY(), forward.GetZ() };
+	*outUp      = { up.GetX(),      up.GetY(),      up.GetZ()      };
+	*outRight   = { right.GetX(),   right.GetY(),   right.GetZ()   };
+}
+
+JPC_API JPC_Mat44 JPC_VehicleConstraint_GetWheelLocalTransform(const JPC_VehicleConstraint* self, uint32_t inWheelIndex, JPC_Vec3 inWheelRight, JPC_Vec3 inWheelUp) {
+	JPH::Mat44 result = to_jph(self)->GetWheelLocalTransform(
+		inWheelIndex,
+		JPH::Vec3(inWheelRight.x, inWheelRight.y, inWheelRight.z),
+		JPH::Vec3(inWheelUp.x, inWheelUp.y, inWheelUp.z));
+	JPC_Mat44 out;
+	memcpy(&out, &result, sizeof(JPC_Mat44));
+	return out;
+}
+
+JPC_API JPC_RMat44 JPC_VehicleConstraint_GetWheelWorldTransform(const JPC_VehicleConstraint* self, uint32_t inWheelIndex, JPC_Vec3 inWheelRight, JPC_Vec3 inWheelUp) {
+	JPH::RMat44 result = to_jph(self)->GetWheelWorldTransform(
+		inWheelIndex,
+		JPH::Vec3(inWheelRight.x, inWheelRight.y, inWheelRight.z),
+		JPH::Vec3(inWheelUp.x, inWheelUp.y, inWheelUp.z));
+	JPC_RMat44 out;
+	memcpy(&out, &result, sizeof(JPC_RMat44));
+	return out;
 }

@@ -406,3 +406,25 @@ typedef enum JPC_VehicleTransmissionMode: uint8_t {
 
 ENSURE_ENUM_EQ(JPC_VEHICLE_TRANSMISSION_MODE_AUTO,   JPH::ETransmissionMode::Auto)
 ENSURE_ENUM_EQ(JPC_VEHICLE_TRANSMISSION_MODE_MANUAL, JPH::ETransmissionMode::Manual)
+
+// SoftBodySharedSettings::EBendType
+typedef enum JPC_SoftBodyEBendType {
+	JPC_SOFT_BODY_BEND_TYPE_NONE     = 0,
+	JPC_SOFT_BODY_BEND_TYPE_DISTANCE = 1,
+	JPC_SOFT_BODY_BEND_TYPE_DIHEDRAL = 2,
+} JPC_SoftBodyEBendType;
+
+ENSURE_ENUM_EQ(JPC_SOFT_BODY_BEND_TYPE_NONE,     JPH::SoftBodySharedSettings::EBendType::None)
+ENSURE_ENUM_EQ(JPC_SOFT_BODY_BEND_TYPE_DISTANCE, JPH::SoftBodySharedSettings::EBendType::Distance)
+ENSURE_ENUM_EQ(JPC_SOFT_BODY_BEND_TYPE_DIHEDRAL, JPH::SoftBodySharedSettings::EBendType::Dihedral)
+
+// SoftBodySharedSettings::ELRAType
+typedef enum JPC_SoftBodyELRAType {
+	JPC_SOFT_BODY_LRA_TYPE_NONE               = 0,
+	JPC_SOFT_BODY_LRA_TYPE_EUCLIDEAN_DISTANCE = 1,
+	JPC_SOFT_BODY_LRA_TYPE_GEODESIC_DISTANCE  = 2,
+} JPC_SoftBodyELRAType;
+
+ENSURE_ENUM_EQ(JPC_SOFT_BODY_LRA_TYPE_NONE,               JPH::SoftBodySharedSettings::ELRAType::None)
+ENSURE_ENUM_EQ(JPC_SOFT_BODY_LRA_TYPE_EUCLIDEAN_DISTANCE, JPH::SoftBodySharedSettings::ELRAType::EuclideanDistance)
+ENSURE_ENUM_EQ(JPC_SOFT_BODY_LRA_TYPE_GEODESIC_DISTANCE,  JPH::SoftBodySharedSettings::ELRAType::GeodesicDistance)

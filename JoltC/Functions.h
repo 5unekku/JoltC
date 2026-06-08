@@ -2907,9 +2907,56 @@ JPC_API void JPC_SoftBodySharedSettings_CalculateLRALengths(JPC_SoftBodySharedSe
 JPC_API void JPC_SoftBodySharedSettings_CalculateSkinnedConstraintNormals(JPC_SoftBodySharedSettings* self);
 
 ////////////////////////////////////////////////////////////////////////////////
-// PhysicsMaterial default
+// PhysicsMaterial default + custom bridge
 
 JPC_API const JPC_PhysicsMaterial* JPC_PhysicsMaterial_GetDefault();
+
+typedef struct {
+    const char* (*GetDebugName)(void* self);
+    JPC_Color (*GetDebugColor)(void* self);
+} JPC_PhysicsMaterialFns;
+
+JPC_API JPC_PhysicsMaterial* JPC_PhysicsMaterial_new(void* inUserData, JPC_PhysicsMaterialFns inFns);
+JPC_API void JPC_PhysicsMaterial_AddRef(const JPC_PhysicsMaterial* self);
+JPC_API void JPC_PhysicsMaterial_Release(const JPC_PhysicsMaterial* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// ConstraintSettingsObj — opaque handle for constraint settings returned at runtime
+
+typedef struct JPC_ConstraintSettingsObj JPC_ConstraintSettingsObj;
+
+JPC_API JPC_ConstraintSettingsObj* JPC_Constraint_GetConstraintSettings(const JPC_Constraint* self);
+JPC_API void JPC_ConstraintSettingsObj_AddRef(const JPC_ConstraintSettingsObj* self);
+JPC_API void JPC_ConstraintSettingsObj_Release(const JPC_ConstraintSettingsObj* self);
+JPC_API JPC_ConstraintSettings JPC_ConstraintSettingsObj_GetBaseSettings(const JPC_ConstraintSettingsObj* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// Ragdoll pose (matrix overloads)
+
+JPC_API void JPC_Ragdoll_SetPose(JPC_Ragdoll* self, JPC_RVec3 inRootOffset, const JPC_Mat44* inJointMatrices, uint32_t inCount, bool inLockBodies);
+JPC_API void JPC_Ragdoll_GetPose(JPC_Ragdoll* self, JPC_RVec3* outRootOffset, JPC_Mat44* outJointMatrices, uint32_t inCount, bool inLockBodies);
+JPC_API void JPC_Ragdoll_DriveToPoseUsingKinematics(JPC_Ragdoll* self, JPC_RVec3 inRootOffset, const JPC_Mat44* inJointMatrices, uint32_t inCount, float inDeltaTime, bool inLockBodies);
+
+////////////////////////////////////////////////////////////////////////////////
+// SoftBodySharedSettings — CreateConstraints + material assignment
+
+typedef struct {
+    float Compliance;
+    float ShearCompliance;
+    float BendCompliance;
+    JPC_SoftBodyELRAType LRAType;
+    float LRAMaxDistanceMultiplier;
+} JPC_SoftBodyVertexAttributes;
+
+JPC_API void JPC_SoftBodySharedSettings_CreateConstraints(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyVertexAttributes* inVertexAttributes, uint32_t inVertexAttributesCount, JPC_SoftBodyEBendType inBendType, float inAngleTolerance);
+JPC_API void JPC_SoftBodySharedSettings_AddMaterial(JPC_SoftBodySharedSettings* self, const JPC_PhysicsMaterial* inMaterial);
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleConstraint wheel transform helpers
+
+JPC_API void JPC_VehicleConstraint_GetWheelLocalBasis(const JPC_VehicleConstraint* self, uint32_t inWheelIndex, JPC_Vec3* outForward, JPC_Vec3* outUp, JPC_Vec3* outRight);
+JPC_API JPC_Mat44 JPC_VehicleConstraint_GetWheelLocalTransform(const JPC_VehicleConstraint* self, uint32_t inWheelIndex, JPC_Vec3 inWheelRight, JPC_Vec3 inWheelUp);
+JPC_API JPC_RMat44 JPC_VehicleConstraint_GetWheelWorldTransform(const JPC_VehicleConstraint* self, uint32_t inWheelIndex, JPC_Vec3 inWheelRight, JPC_Vec3 inWheelUp);
 
 #ifdef __cplusplus
 }
