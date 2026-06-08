@@ -42,6 +42,36 @@
 #include <Jolt/Physics/Character/Character.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 
+#include <Jolt/Geometry/AABox.h>
+#include <Jolt/Physics/Collision/PhysicsMaterial.h>
+#include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
+#include <Jolt/Physics/Collision/Shape/ScaledShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Collision/Shape/TaperedCapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/TaperedCylinderShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PulleyConstraint.h>
+#include <Jolt/Physics/Constraints/GearConstraint.h>
+#include <Jolt/Physics/Constraints/RackAndPinionConstraint.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Constraints/PathConstraint.h>
+#include <Jolt/Physics/Constraints/PathConstraintPathHermite.h>
+#include <Jolt/Physics/Vehicle/VehicleConstraint.h>
+#include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
+#include <Jolt/Physics/Vehicle/VehicleCollisionTester.h>
+#include <Jolt/Physics/Vehicle/VehicleEngine.h>
+#include <Jolt/Physics/Vehicle/VehicleTransmission.h>
+#include <Jolt/Physics/Vehicle/VehicleDifferential.h>
+#include <Jolt/Physics/Vehicle/VehicleAntiRollBar.h>
+#include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
+#include <Jolt/Physics/SoftBody/SoftBodySharedSettings.h>
+#include <Jolt/Physics/StateRecorder.h>
+#include <Jolt/Physics/StateRecorderImpl.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+
 #include <JoltC/JoltC.h>
 
 #define JPC_IMPL static
@@ -3581,4 +3611,1599 @@ JPC_API bool JPC_CharacterVirtual_SetShape(JPC_CharacterVirtual* self, JPC_Chara
 		*to_jph(args->BodyFilter),
 		*to_jph(args->ShapeFilter),
 		*to_jph(args->TempAllocator));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// HeightFieldShapeSettings
+
+JPC_API void JPC_HeightFieldShapeSettings_default(JPC_HeightFieldShapeSettings* object) {
+	JPH::HeightFieldShapeSettings s;
+
+	object->UserData = s.mUserData;
+	object->Offset = to_jpc(s.mOffset);
+	object->Scale = to_jpc(s.mScale);
+	object->SampleCount = s.mSampleCount;
+	object->MinHeightValue = s.mMinHeightValue;
+	object->MaxHeightValue = s.mMaxHeightValue;
+	object->BlockSize = s.mBlockSize;
+	object->BitsPerSample = s.mBitsPerSample;
+	object->HeightSamples = nullptr;
+	object->HeightSamplesLen = 0;
+	object->MaterialIndices = nullptr;
+	object->MaterialIndicesLen = 0;
+	object->ActiveEdgeCosThresholdAngle = s.mActiveEdgeCosThresholdAngle;
+}
+
+JPC_API bool JPC_HeightFieldShapeSettings_Create(const JPC_HeightFieldShapeSettings* self, JPC_Shape** outShape, JPC_String** outError) {
+	JPH::HeightFieldShapeSettings s;
+
+	s.mUserData = self->UserData;
+	s.mOffset = to_jph(self->Offset);
+	s.mScale = to_jph(self->Scale);
+	s.mSampleCount = self->SampleCount;
+	s.mMinHeightValue = self->MinHeightValue;
+	s.mMaxHeightValue = self->MaxHeightValue;
+	s.mBlockSize = self->BlockSize;
+	s.mBitsPerSample = self->BitsPerSample;
+	s.mHeightSamples.assign(self->HeightSamples, self->HeightSamples + self->HeightSamplesLen);
+	s.mMaterialIndices.assign(self->MaterialIndices, self->MaterialIndices + self->MaterialIndicesLen);
+	s.mActiveEdgeCosThresholdAngle = self->ActiveEdgeCosThresholdAngle;
+
+	return HandleShapeResult(s.Create(), outShape, outError);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ScaledShapeSettings
+
+JPC_API void JPC_ScaledShapeSettings_default(JPC_ScaledShapeSettings* object) {
+	object->UserData = 0;
+	object->InnerShape = nullptr;
+	object->Scale = to_jpc(JPH::Vec3::sReplicate(1.0f));
+}
+
+JPC_API bool JPC_ScaledShapeSettings_Create(const JPC_ScaledShapeSettings* self, JPC_Shape** outShape, JPC_String** outError) {
+	JPH::ScaledShapeSettings s(to_jph(self->InnerShape), to_jph(self->Scale));
+	s.mUserData = self->UserData;
+
+	return HandleShapeResult(s.Create(), outShape, outError);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// RotatedTranslatedShapeSettings
+
+JPC_API void JPC_RotatedTranslatedShapeSettings_default(JPC_RotatedTranslatedShapeSettings* object) {
+	object->UserData = 0;
+	object->InnerShape = nullptr;
+	object->Position = to_jpc(JPH::Vec3::sZero());
+	object->Rotation = to_jpc(JPH::Quat::sIdentity());
+}
+
+JPC_API bool JPC_RotatedTranslatedShapeSettings_Create(const JPC_RotatedTranslatedShapeSettings* self, JPC_Shape** outShape, JPC_String** outError) {
+	JPH::RotatedTranslatedShapeSettings s(to_jph(self->Position), to_jph(self->Rotation), to_jph(self->InnerShape));
+	s.mUserData = self->UserData;
+
+	return HandleShapeResult(s.Create(), outShape, outError);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// OffsetCenterOfMassShapeSettings
+
+JPC_API void JPC_OffsetCenterOfMassShapeSettings_default(JPC_OffsetCenterOfMassShapeSettings* object) {
+	object->UserData = 0;
+	object->InnerShape = nullptr;
+	object->Offset = to_jpc(JPH::Vec3::sZero());
+}
+
+JPC_API bool JPC_OffsetCenterOfMassShapeSettings_Create(const JPC_OffsetCenterOfMassShapeSettings* self, JPC_Shape** outShape, JPC_String** outError) {
+	JPH::OffsetCenterOfMassShapeSettings s(to_jph(self->Offset), to_jph(self->InnerShape));
+	s.mUserData = self->UserData;
+
+	return HandleShapeResult(s.Create(), outShape, outError);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// TaperedCapsuleShapeSettings
+
+JPC_API void JPC_TaperedCapsuleShapeSettings_default(JPC_TaperedCapsuleShapeSettings* object) {
+	JPH::TaperedCapsuleShapeSettings s;
+
+	object->UserData = s.mUserData;
+	object->Density = s.mDensity;
+	object->HalfHeightOfTaperedCylinder = s.mHalfHeightOfTaperedCylinder;
+	object->TopRadius = s.mTopRadius;
+	object->BottomRadius = s.mBottomRadius;
+}
+
+JPC_API bool JPC_TaperedCapsuleShapeSettings_Create(const JPC_TaperedCapsuleShapeSettings* self, JPC_Shape** outShape, JPC_String** outError) {
+	JPH::TaperedCapsuleShapeSettings s;
+
+	s.mUserData = self->UserData;
+	s.mDensity = self->Density;
+	s.mHalfHeightOfTaperedCylinder = self->HalfHeightOfTaperedCylinder;
+	s.mTopRadius = self->TopRadius;
+	s.mBottomRadius = self->BottomRadius;
+
+	return HandleShapeResult(s.Create(), outShape, outError);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// TaperedCylinderShapeSettings
+
+JPC_API void JPC_TaperedCylinderShapeSettings_default(JPC_TaperedCylinderShapeSettings* object) {
+	JPH::TaperedCylinderShapeSettings s;
+
+	object->UserData = s.mUserData;
+	object->Density = s.mDensity;
+	object->HalfHeight = s.mHalfHeight;
+	object->TopRadius = s.mTopRadius;
+	object->BottomRadius = s.mBottomRadius;
+	object->ConvexRadius = s.mConvexRadius;
+}
+
+JPC_API bool JPC_TaperedCylinderShapeSettings_Create(const JPC_TaperedCylinderShapeSettings* self, JPC_Shape** outShape, JPC_String** outError) {
+	JPH::TaperedCylinderShapeSettings s;
+
+	s.mUserData = self->UserData;
+	s.mDensity = self->Density;
+	s.mHalfHeight = self->HalfHeight;
+	s.mTopRadius = self->TopRadius;
+	s.mBottomRadius = self->BottomRadius;
+	s.mConvexRadius = self->ConvexRadius;
+
+	return HandleShapeResult(s.Create(), outShape, outError);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// EmptyShapeSettings
+
+JPC_API void JPC_EmptyShapeSettings_default(JPC_EmptyShapeSettings* object) {
+	object->UserData = 0;
+	object->CenterOfMass = to_jpc(JPH::Vec3::sZero());
+}
+
+JPC_API bool JPC_EmptyShapeSettings_Create(const JPC_EmptyShapeSettings* self, JPC_Shape** outShape, JPC_String** outError) {
+	JPH::EmptyShapeSettings s(to_jph(self->CenterOfMass));
+	s.mUserData = self->UserData;
+
+	return HandleShapeResult(s.Create(), outShape, outError);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Body collision group
+
+JPC_API JPC_CollisionGroup JPC_Body_GetCollisionGroup(const JPC_Body* self) {
+	return JPC_CollisionGroup_to_jpc(&to_jph(self)->GetCollisionGroup());
+}
+
+JPC_API void JPC_Body_SetCollisionGroup(JPC_Body* self, const JPC_CollisionGroup* inGroup) {
+	to_jph(self)->SetCollisionGroup(JPC_CollisionGroup_to_jph(inGroup));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// BodyInterface extras
+
+JPC_API void JPC_BodyInterface_ActivateConstraint(JPC_BodyInterface* self, const JPC_TwoBodyConstraint* inConstraint) {
+	to_jph(self)->ActivateConstraint(to_jph(inConstraint));
+}
+
+JPC_API void JPC_BodyInterface_ActivateBodiesInAABox(
+	JPC_BodyInterface* self,
+	const JPC_AABox* inBox,
+	const JPC_BroadPhaseLayerFilter* inBroadPhaseLayerFilter,
+	const JPC_ObjectLayerFilter* inObjectLayerFilter)
+{
+	JPH::AABox box(to_jph(inBox->Min), to_jph(inBox->Max));
+	to_jph(self)->ActivateBodiesInAABox(box, *to_jph(inBroadPhaseLayerFilter), *to_jph(inObjectLayerFilter));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PointConstraint -> TwoBodyConstraint -> Constraint -> RefTarget<Constraint>
+
+OPAQUE_WRAPPER(JPC_PointConstraint, JPH::PointConstraint);
+
+JPC_API JPC_Vec3 JPC_PointConstraint_GetTotalLambdaPosition(const JPC_PointConstraint* self) {
+	return to_jpc(to_jph(self)->GetTotalLambdaPosition());
+}
+
+JPC_IMPL void JPC_PointConstraintSettings_to_jpc(
+	JPC_PointConstraintSettings* outJpc,
+	const JPH::PointConstraintSettings* inJph)
+{
+	JPC_ConstraintSettings_to_jpc(&outJpc->ConstraintSettings, inJph);
+
+	outJpc->Space = static_cast<JPC_ConstraintSpace>(inJph->mSpace);
+	outJpc->Point1 = to_jpc(inJph->mPoint1);
+	outJpc->Point2 = to_jpc(inJph->mPoint2);
+}
+
+JPC_IMPL void JPC_PointConstraintSettings_to_jph(
+	const JPC_PointConstraintSettings* inJpc,
+	JPH::PointConstraintSettings* outJph)
+{
+	JPC_ConstraintSettings_to_jph(&inJpc->ConstraintSettings, outJph);
+
+	outJph->mSpace = static_cast<JPH::EConstraintSpace>(inJpc->Space);
+	outJph->mPoint1 = to_jph(inJpc->Point1);
+	outJph->mPoint2 = to_jph(inJpc->Point2);
+}
+
+JPC_API void JPC_PointConstraintSettings_default(JPC_PointConstraintSettings* settings) {
+	JPH::PointConstraintSettings defaultSettings{};
+	JPC_PointConstraintSettings_to_jpc(settings, &defaultSettings);
+}
+
+JPC_API JPC_PointConstraint* JPC_PointConstraintSettings_Create(
+	const JPC_PointConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2)
+{
+	JPH::PointConstraintSettings jphSettings;
+	JPC_PointConstraintSettings_to_jph(self, &jphSettings);
+
+	JPH::PointConstraint* outJph = new JPH::PointConstraint(*to_jph(inBody1), *to_jph(inBody2), jphSettings);
+	return (JPC_PointConstraint*)outJph;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ConeConstraint -> TwoBodyConstraint -> Constraint -> RefTarget<Constraint>
+
+OPAQUE_WRAPPER(JPC_ConeConstraint, JPH::ConeConstraint);
+
+JPC_API void JPC_ConeConstraint_SetHalfConeAngle(JPC_ConeConstraint* self, float inHalfConeAngle) {
+	to_jph(self)->SetHalfConeAngle(inHalfConeAngle);
+}
+
+JPC_API float JPC_ConeConstraint_GetCosHalfConeAngle(const JPC_ConeConstraint* self) {
+	return to_jph(self)->GetCosHalfConeAngle();
+}
+
+JPC_API JPC_Vec3 JPC_ConeConstraint_GetTotalLambdaPosition(const JPC_ConeConstraint* self) {
+	return to_jpc(to_jph(self)->GetTotalLambdaPosition());
+}
+
+JPC_API float JPC_ConeConstraint_GetTotalLambdaRotation(const JPC_ConeConstraint* self) {
+	return to_jph(self)->GetTotalLambdaRotation();
+}
+
+JPC_IMPL void JPC_ConeConstraintSettings_to_jpc(
+	JPC_ConeConstraintSettings* outJpc,
+	const JPH::ConeConstraintSettings* inJph)
+{
+	JPC_ConstraintSettings_to_jpc(&outJpc->ConstraintSettings, inJph);
+
+	outJpc->Space = static_cast<JPC_ConstraintSpace>(inJph->mSpace);
+	outJpc->Point1 = to_jpc(inJph->mPoint1);
+	outJpc->TwistAxis1 = to_jpc(inJph->mTwistAxis1);
+	outJpc->Point2 = to_jpc(inJph->mPoint2);
+	outJpc->TwistAxis2 = to_jpc(inJph->mTwistAxis2);
+	outJpc->HalfConeAngle = inJph->mHalfConeAngle;
+}
+
+JPC_IMPL void JPC_ConeConstraintSettings_to_jph(
+	const JPC_ConeConstraintSettings* inJpc,
+	JPH::ConeConstraintSettings* outJph)
+{
+	JPC_ConstraintSettings_to_jph(&inJpc->ConstraintSettings, outJph);
+
+	outJph->mSpace = static_cast<JPH::EConstraintSpace>(inJpc->Space);
+	outJph->mPoint1 = to_jph(inJpc->Point1);
+	outJph->mTwistAxis1 = to_jph(inJpc->TwistAxis1);
+	outJph->mPoint2 = to_jph(inJpc->Point2);
+	outJph->mTwistAxis2 = to_jph(inJpc->TwistAxis2);
+	outJph->mHalfConeAngle = inJpc->HalfConeAngle;
+}
+
+JPC_API void JPC_ConeConstraintSettings_default(JPC_ConeConstraintSettings* settings) {
+	JPH::ConeConstraintSettings defaultSettings{};
+	JPC_ConeConstraintSettings_to_jpc(settings, &defaultSettings);
+}
+
+JPC_API JPC_ConeConstraint* JPC_ConeConstraintSettings_Create(
+	const JPC_ConeConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2)
+{
+	JPH::ConeConstraintSettings jphSettings;
+	JPC_ConeConstraintSettings_to_jph(self, &jphSettings);
+
+	JPH::ConeConstraint* outJph = new JPH::ConeConstraint(*to_jph(inBody1), *to_jph(inBody2), jphSettings);
+	return (JPC_ConeConstraint*)outJph;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PulleyConstraint -> TwoBodyConstraint -> Constraint -> RefTarget<Constraint>
+
+OPAQUE_WRAPPER(JPC_PulleyConstraint, JPH::PulleyConstraint);
+
+JPC_API void JPC_PulleyConstraint_SetLength(JPC_PulleyConstraint* self, float inMinLength, float inMaxLength) {
+	to_jph(self)->SetLength(inMinLength, inMaxLength);
+}
+
+JPC_API float JPC_PulleyConstraint_GetMinLength(const JPC_PulleyConstraint* self) {
+	return to_jph(self)->GetMinLength();
+}
+
+JPC_API float JPC_PulleyConstraint_GetMaxLength(const JPC_PulleyConstraint* self) {
+	return to_jph(self)->GetMaxLength();
+}
+
+JPC_API float JPC_PulleyConstraint_GetCurrentLength(const JPC_PulleyConstraint* self) {
+	return to_jph(self)->GetCurrentLength();
+}
+
+JPC_API float JPC_PulleyConstraint_GetTotalLambdaPosition(const JPC_PulleyConstraint* self) {
+	return to_jph(self)->GetTotalLambdaPosition();
+}
+
+JPC_IMPL void JPC_PulleyConstraintSettings_to_jpc(
+	JPC_PulleyConstraintSettings* outJpc,
+	const JPH::PulleyConstraintSettings* inJph)
+{
+	JPC_ConstraintSettings_to_jpc(&outJpc->ConstraintSettings, inJph);
+
+	outJpc->Space = static_cast<JPC_ConstraintSpace>(inJph->mSpace);
+	outJpc->BodyPoint1 = to_jpc(inJph->mBodyPoint1);
+	outJpc->FixedPoint1 = to_jpc(inJph->mFixedPoint1);
+	outJpc->BodyPoint2 = to_jpc(inJph->mBodyPoint2);
+	outJpc->FixedPoint2 = to_jpc(inJph->mFixedPoint2);
+	outJpc->Ratio = inJph->mRatio;
+	outJpc->MinLength = inJph->mMinLength;
+	outJpc->MaxLength = inJph->mMaxLength;
+}
+
+JPC_IMPL void JPC_PulleyConstraintSettings_to_jph(
+	const JPC_PulleyConstraintSettings* inJpc,
+	JPH::PulleyConstraintSettings* outJph)
+{
+	JPC_ConstraintSettings_to_jph(&inJpc->ConstraintSettings, outJph);
+
+	outJph->mSpace = static_cast<JPH::EConstraintSpace>(inJpc->Space);
+	outJph->mBodyPoint1 = to_jph(inJpc->BodyPoint1);
+	outJph->mFixedPoint1 = to_jph(inJpc->FixedPoint1);
+	outJph->mBodyPoint2 = to_jph(inJpc->BodyPoint2);
+	outJph->mFixedPoint2 = to_jph(inJpc->FixedPoint2);
+	outJph->mRatio = inJpc->Ratio;
+	outJph->mMinLength = inJpc->MinLength;
+	outJph->mMaxLength = inJpc->MaxLength;
+}
+
+JPC_API void JPC_PulleyConstraintSettings_default(JPC_PulleyConstraintSettings* settings) {
+	JPH::PulleyConstraintSettings defaultSettings{};
+	JPC_PulleyConstraintSettings_to_jpc(settings, &defaultSettings);
+}
+
+JPC_API JPC_PulleyConstraint* JPC_PulleyConstraintSettings_Create(
+	const JPC_PulleyConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2)
+{
+	JPH::PulleyConstraintSettings jphSettings;
+	JPC_PulleyConstraintSettings_to_jph(self, &jphSettings);
+
+	JPH::PulleyConstraint* outJph = new JPH::PulleyConstraint(*to_jph(inBody1), *to_jph(inBody2), jphSettings);
+	return (JPC_PulleyConstraint*)outJph;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// GearConstraint -> TwoBodyConstraint -> Constraint -> RefTarget<Constraint>
+
+OPAQUE_WRAPPER(JPC_GearConstraint, JPH::GearConstraint);
+
+JPC_API void JPC_GearConstraint_SetConstraints(
+	JPC_GearConstraint* self,
+	const JPC_Constraint* inGear1,
+	const JPC_Constraint* inGear2)
+{
+	to_jph(self)->SetConstraints(to_jph(inGear1), to_jph(inGear2));
+}
+
+JPC_API float JPC_GearConstraint_GetTotalLambda(const JPC_GearConstraint* self) {
+	return to_jph(self)->GetTotalLambda();
+}
+
+JPC_IMPL void JPC_GearConstraintSettings_to_jpc(
+	JPC_GearConstraintSettings* outJpc,
+	const JPH::GearConstraintSettings* inJph)
+{
+	JPC_ConstraintSettings_to_jpc(&outJpc->ConstraintSettings, inJph);
+
+	outJpc->Space = static_cast<JPC_ConstraintSpace>(inJph->mSpace);
+	outJpc->HingeAxis1 = to_jpc(inJph->mHingeAxis1);
+	outJpc->HingeAxis2 = to_jpc(inJph->mHingeAxis2);
+	outJpc->Ratio = inJph->mRatio;
+}
+
+JPC_IMPL void JPC_GearConstraintSettings_to_jph(
+	const JPC_GearConstraintSettings* inJpc,
+	JPH::GearConstraintSettings* outJph)
+{
+	JPC_ConstraintSettings_to_jph(&inJpc->ConstraintSettings, outJph);
+
+	outJph->mSpace = static_cast<JPH::EConstraintSpace>(inJpc->Space);
+	outJph->mHingeAxis1 = to_jph(inJpc->HingeAxis1);
+	outJph->mHingeAxis2 = to_jph(inJpc->HingeAxis2);
+	outJph->mRatio = inJpc->Ratio;
+}
+
+JPC_API void JPC_GearConstraintSettings_default(JPC_GearConstraintSettings* settings) {
+	JPH::GearConstraintSettings defaultSettings{};
+	JPC_GearConstraintSettings_to_jpc(settings, &defaultSettings);
+}
+
+JPC_API JPC_GearConstraint* JPC_GearConstraintSettings_Create(
+	const JPC_GearConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2)
+{
+	JPH::GearConstraintSettings jphSettings;
+	JPC_GearConstraintSettings_to_jph(self, &jphSettings);
+
+	JPH::GearConstraint* outJph = new JPH::GearConstraint(*to_jph(inBody1), *to_jph(inBody2), jphSettings);
+	return (JPC_GearConstraint*)outJph;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// RackAndPinionConstraint -> TwoBodyConstraint -> Constraint -> RefTarget<Constraint>
+
+OPAQUE_WRAPPER(JPC_RackAndPinionConstraint, JPH::RackAndPinionConstraint);
+
+JPC_API void JPC_RackAndPinionConstraint_SetConstraints(
+	JPC_RackAndPinionConstraint* self,
+	const JPC_Constraint* inPinion,
+	const JPC_Constraint* inRack)
+{
+	to_jph(self)->SetConstraints(to_jph(inPinion), to_jph(inRack));
+}
+
+JPC_API float JPC_RackAndPinionConstraint_GetTotalLambda(const JPC_RackAndPinionConstraint* self) {
+	return to_jph(self)->GetTotalLambda();
+}
+
+JPC_IMPL void JPC_RackAndPinionConstraintSettings_to_jpc(
+	JPC_RackAndPinionConstraintSettings* outJpc,
+	const JPH::RackAndPinionConstraintSettings* inJph)
+{
+	JPC_ConstraintSettings_to_jpc(&outJpc->ConstraintSettings, inJph);
+
+	outJpc->Space = static_cast<JPC_ConstraintSpace>(inJph->mSpace);
+	outJpc->HingeAxis = to_jpc(inJph->mHingeAxis);
+	outJpc->SliderAxis = to_jpc(inJph->mSliderAxis);
+	outJpc->Ratio = inJph->mRatio;
+}
+
+JPC_IMPL void JPC_RackAndPinionConstraintSettings_to_jph(
+	const JPC_RackAndPinionConstraintSettings* inJpc,
+	JPH::RackAndPinionConstraintSettings* outJph)
+{
+	JPC_ConstraintSettings_to_jph(&inJpc->ConstraintSettings, outJph);
+
+	outJph->mSpace = static_cast<JPH::EConstraintSpace>(inJpc->Space);
+	outJph->mHingeAxis = to_jph(inJpc->HingeAxis);
+	outJph->mSliderAxis = to_jph(inJpc->SliderAxis);
+	outJph->mRatio = inJpc->Ratio;
+}
+
+JPC_API void JPC_RackAndPinionConstraintSettings_default(JPC_RackAndPinionConstraintSettings* settings) {
+	JPH::RackAndPinionConstraintSettings defaultSettings{};
+	JPC_RackAndPinionConstraintSettings_to_jpc(settings, &defaultSettings);
+}
+
+JPC_API JPC_RackAndPinionConstraint* JPC_RackAndPinionConstraintSettings_Create(
+	const JPC_RackAndPinionConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2)
+{
+	JPH::RackAndPinionConstraintSettings jphSettings;
+	JPC_RackAndPinionConstraintSettings_to_jph(self, &jphSettings);
+
+	JPH::RackAndPinionConstraint* outJph = new JPH::RackAndPinionConstraint(*to_jph(inBody1), *to_jph(inBody2), jphSettings);
+	return (JPC_RackAndPinionConstraint*)outJph;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SwingTwistConstraint -> TwoBodyConstraint -> Constraint -> RefTarget<Constraint>
+
+OPAQUE_WRAPPER(JPC_SwingTwistConstraint, JPH::SwingTwistConstraint);
+
+JPC_API float JPC_SwingTwistConstraint_GetNormalHalfConeAngle(const JPC_SwingTwistConstraint* self) {
+	return to_jph(self)->GetNormalHalfConeAngle();
+}
+
+JPC_API void JPC_SwingTwistConstraint_SetNormalHalfConeAngle(JPC_SwingTwistConstraint* self, float inAngle) {
+	to_jph(self)->SetNormalHalfConeAngle(inAngle);
+}
+
+JPC_API float JPC_SwingTwistConstraint_GetPlaneHalfConeAngle(const JPC_SwingTwistConstraint* self) {
+	return to_jph(self)->GetPlaneHalfConeAngle();
+}
+
+JPC_API void JPC_SwingTwistConstraint_SetPlaneHalfConeAngle(JPC_SwingTwistConstraint* self, float inAngle) {
+	to_jph(self)->SetPlaneHalfConeAngle(inAngle);
+}
+
+JPC_API float JPC_SwingTwistConstraint_GetTwistMinAngle(const JPC_SwingTwistConstraint* self) {
+	return to_jph(self)->GetTwistMinAngle();
+}
+
+JPC_API void JPC_SwingTwistConstraint_SetTwistMinAngle(JPC_SwingTwistConstraint* self, float inAngle) {
+	to_jph(self)->SetTwistMinAngle(inAngle);
+}
+
+JPC_API float JPC_SwingTwistConstraint_GetTwistMaxAngle(const JPC_SwingTwistConstraint* self) {
+	return to_jph(self)->GetTwistMaxAngle();
+}
+
+JPC_API void JPC_SwingTwistConstraint_SetTwistMaxAngle(JPC_SwingTwistConstraint* self, float inAngle) {
+	to_jph(self)->SetTwistMaxAngle(inAngle);
+}
+
+JPC_API float JPC_SwingTwistConstraint_GetMaxFrictionTorque(const JPC_SwingTwistConstraint* self) {
+	return to_jph(self)->GetMaxFrictionTorque();
+}
+
+JPC_API void JPC_SwingTwistConstraint_SetMaxFrictionTorque(JPC_SwingTwistConstraint* self, float inFrictionTorque) {
+	to_jph(self)->SetMaxFrictionTorque(inFrictionTorque);
+}
+
+JPC_API JPC_MotorState JPC_SwingTwistConstraint_GetSwingMotorState(const JPC_SwingTwistConstraint* self) {
+	return to_jpc(to_jph(self)->GetSwingMotorState());
+}
+
+JPC_API void JPC_SwingTwistConstraint_SetSwingMotorState(JPC_SwingTwistConstraint* self, JPC_MotorState inState) {
+	to_jph(self)->SetSwingMotorState(to_jph(inState));
+}
+
+JPC_API JPC_MotorState JPC_SwingTwistConstraint_GetTwistMotorState(const JPC_SwingTwistConstraint* self) {
+	return to_jpc(to_jph(self)->GetTwistMotorState());
+}
+
+JPC_API void JPC_SwingTwistConstraint_SetTwistMotorState(JPC_SwingTwistConstraint* self, JPC_MotorState inState) {
+	to_jph(self)->SetTwistMotorState(to_jph(inState));
+}
+
+JPC_API JPC_Vec3 JPC_SwingTwistConstraint_GetTargetAngularVelocityCS(const JPC_SwingTwistConstraint* self) {
+	return to_jpc(to_jph(self)->GetTargetAngularVelocityCS());
+}
+
+JPC_API void JPC_SwingTwistConstraint_SetTargetAngularVelocityCS(JPC_SwingTwistConstraint* self, JPC_Vec3 inAngularVelocity) {
+	to_jph(self)->SetTargetAngularVelocityCS(to_jph(inAngularVelocity));
+}
+
+JPC_API JPC_Quat JPC_SwingTwistConstraint_GetTargetOrientationCS(const JPC_SwingTwistConstraint* self) {
+	return to_jpc(to_jph(self)->GetTargetOrientationCS());
+}
+
+JPC_API void JPC_SwingTwistConstraint_SetTargetOrientationCS(JPC_SwingTwistConstraint* self, JPC_Quat inOrientation) {
+	to_jph(self)->SetTargetOrientationCS(to_jph(inOrientation));
+}
+
+JPC_API JPC_Quat JPC_SwingTwistConstraint_GetRotationInConstraintSpace(const JPC_SwingTwistConstraint* self) {
+	return to_jpc(to_jph(self)->GetRotationInConstraintSpace());
+}
+
+JPC_API JPC_Vec3 JPC_SwingTwistConstraint_GetTotalLambdaPosition(const JPC_SwingTwistConstraint* self) {
+	return to_jpc(to_jph(self)->GetTotalLambdaPosition());
+}
+
+JPC_API float JPC_SwingTwistConstraint_GetTotalLambdaTwist(const JPC_SwingTwistConstraint* self) {
+	return to_jph(self)->GetTotalLambdaTwist();
+}
+
+JPC_API float JPC_SwingTwistConstraint_GetTotalLambdaSwingY(const JPC_SwingTwistConstraint* self) {
+	return to_jph(self)->GetTotalLambdaSwingY();
+}
+
+JPC_API float JPC_SwingTwistConstraint_GetTotalLambdaSwingZ(const JPC_SwingTwistConstraint* self) {
+	return to_jph(self)->GetTotalLambdaSwingZ();
+}
+
+JPC_API JPC_Vec3 JPC_SwingTwistConstraint_GetTotalLambdaMotor(const JPC_SwingTwistConstraint* self) {
+	return to_jpc(to_jph(self)->GetTotalLambdaMotor());
+}
+
+JPC_IMPL void JPC_SwingTwistConstraintSettings_to_jpc(
+	JPC_SwingTwistConstraintSettings* outJpc,
+	const JPH::SwingTwistConstraintSettings* inJph)
+{
+	JPC_ConstraintSettings_to_jpc(&outJpc->ConstraintSettings, inJph);
+
+	outJpc->Space = static_cast<JPC_ConstraintSpace>(inJph->mSpace);
+	outJpc->Position1 = to_jpc(inJph->mPosition1);
+	outJpc->TwistAxis1 = to_jpc(inJph->mTwistAxis1);
+	outJpc->PlaneAxis1 = to_jpc(inJph->mPlaneAxis1);
+	outJpc->Position2 = to_jpc(inJph->mPosition2);
+	outJpc->TwistAxis2 = to_jpc(inJph->mTwistAxis2);
+	outJpc->PlaneAxis2 = to_jpc(inJph->mPlaneAxis2);
+	outJpc->SwingType = static_cast<JPC_SwingType>(inJph->mSwingType);
+	outJpc->NormalHalfConeAngle = inJph->mNormalHalfConeAngle;
+	outJpc->PlaneHalfConeAngle = inJph->mPlaneHalfConeAngle;
+	outJpc->TwistMinAngle = inJph->mTwistMinAngle;
+	outJpc->TwistMaxAngle = inJph->mTwistMaxAngle;
+	outJpc->MaxFrictionTorque = inJph->mMaxFrictionTorque;
+	JPC_MotorSettings_to_jpc(&outJpc->SwingMotorSettings, &inJph->mSwingMotorSettings);
+	JPC_MotorSettings_to_jpc(&outJpc->TwistMotorSettings, &inJph->mTwistMotorSettings);
+}
+
+JPC_IMPL void JPC_SwingTwistConstraintSettings_to_jph(
+	const JPC_SwingTwistConstraintSettings* inJpc,
+	JPH::SwingTwistConstraintSettings* outJph)
+{
+	JPC_ConstraintSettings_to_jph(&inJpc->ConstraintSettings, outJph);
+
+	outJph->mSpace = static_cast<JPH::EConstraintSpace>(inJpc->Space);
+	outJph->mPosition1 = to_jph(inJpc->Position1);
+	outJph->mTwistAxis1 = to_jph(inJpc->TwistAxis1);
+	outJph->mPlaneAxis1 = to_jph(inJpc->PlaneAxis1);
+	outJph->mPosition2 = to_jph(inJpc->Position2);
+	outJph->mTwistAxis2 = to_jph(inJpc->TwistAxis2);
+	outJph->mPlaneAxis2 = to_jph(inJpc->PlaneAxis2);
+	outJph->mSwingType = static_cast<JPH::ESwingType>(inJpc->SwingType);
+	outJph->mNormalHalfConeAngle = inJpc->NormalHalfConeAngle;
+	outJph->mPlaneHalfConeAngle = inJpc->PlaneHalfConeAngle;
+	outJph->mTwistMinAngle = inJpc->TwistMinAngle;
+	outJph->mTwistMaxAngle = inJpc->TwistMaxAngle;
+	outJph->mMaxFrictionTorque = inJpc->MaxFrictionTorque;
+	JPC_MotorSettings_to_jph(&inJpc->SwingMotorSettings, &outJph->mSwingMotorSettings);
+	JPC_MotorSettings_to_jph(&inJpc->TwistMotorSettings, &outJph->mTwistMotorSettings);
+}
+
+JPC_API void JPC_SwingTwistConstraintSettings_default(JPC_SwingTwistConstraintSettings* settings) {
+	JPH::SwingTwistConstraintSettings defaultSettings{};
+	JPC_SwingTwistConstraintSettings_to_jpc(settings, &defaultSettings);
+}
+
+JPC_API JPC_SwingTwistConstraint* JPC_SwingTwistConstraintSettings_Create(
+	const JPC_SwingTwistConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2)
+{
+	JPH::SwingTwistConstraintSettings jphSettings;
+	JPC_SwingTwistConstraintSettings_to_jph(self, &jphSettings);
+
+	JPH::SwingTwistConstraint* outJph = new JPH::SwingTwistConstraint(*to_jph(inBody1), *to_jph(inBody2), jphSettings);
+	return (JPC_SwingTwistConstraint*)outJph;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PathConstraintPath -> RefTarget<PathConstraintPath>
+
+OPAQUE_WRAPPER(JPC_PathConstraintPath, JPH::PathConstraintPath)
+
+JPC_API uint32_t JPC_PathConstraintPath_GetRefCount(const JPC_PathConstraintPath* self) {
+	return to_jph(self)->GetRefCount();
+}
+
+JPC_API void JPC_PathConstraintPath_AddRef(const JPC_PathConstraintPath* self) {
+	to_jph(self)->AddRef();
+}
+
+JPC_API void JPC_PathConstraintPath_Release(const JPC_PathConstraintPath* self) {
+	to_jph(self)->Release();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PathConstraintPathHermite -> PathConstraintPath
+
+OPAQUE_WRAPPER(JPC_PathConstraintPathHermite, JPH::PathConstraintPathHermite)
+
+JPC_API JPC_PathConstraintPathHermite* JPC_PathConstraintPathHermite_new() {
+	auto* path = new JPH::PathConstraintPathHermite();
+	path->AddRef();
+	return to_jpc(path);
+}
+
+JPC_API void JPC_PathConstraintPathHermite_AddPoint(
+	JPC_PathConstraintPathHermite* self,
+	JPC_Vec3 inPosition,
+	JPC_Vec3 inTangent,
+	JPC_Vec3 inNormal)
+{
+	to_jph(self)->AddPoint(to_jph(inPosition), to_jph(inTangent), to_jph(inNormal));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PathConstraint -> TwoBodyConstraint -> Constraint -> RefTarget<Constraint>
+
+OPAQUE_WRAPPER(JPC_PathConstraint, JPH::PathConstraint);
+
+JPC_API void JPC_PathConstraint_SetPath(
+	JPC_PathConstraint* self,
+	JPC_PathConstraintPath* inPath,
+	float inPathFraction)
+{
+	to_jph(self)->SetPath(to_jph(inPath), inPathFraction);
+}
+
+JPC_API float JPC_PathConstraint_GetPathFraction(const JPC_PathConstraint* self) {
+	return to_jph(self)->GetPathFraction();
+}
+
+JPC_API void JPC_PathConstraint_SetMaxFrictionForce(JPC_PathConstraint* self, float inFrictionForce) {
+	to_jph(self)->SetMaxFrictionForce(inFrictionForce);
+}
+
+JPC_API float JPC_PathConstraint_GetMaxFrictionForce(const JPC_PathConstraint* self) {
+	return to_jph(self)->GetMaxFrictionForce();
+}
+
+JPC_API void JPC_PathConstraint_SetPositionMotorState(JPC_PathConstraint* self, JPC_MotorState inState) {
+	to_jph(self)->SetPositionMotorState(to_jph(inState));
+}
+
+JPC_API JPC_MotorState JPC_PathConstraint_GetPositionMotorState(const JPC_PathConstraint* self) {
+	return to_jpc(to_jph(self)->GetPositionMotorState());
+}
+
+JPC_API void JPC_PathConstraint_SetTargetVelocity(JPC_PathConstraint* self, float inVelocity) {
+	to_jph(self)->SetTargetVelocity(inVelocity);
+}
+
+JPC_API float JPC_PathConstraint_GetTargetVelocity(const JPC_PathConstraint* self) {
+	return to_jph(self)->GetTargetVelocity();
+}
+
+JPC_API void JPC_PathConstraint_SetTargetPathFraction(JPC_PathConstraint* self, float inFraction) {
+	to_jph(self)->SetTargetPathFraction(inFraction);
+}
+
+JPC_API float JPC_PathConstraint_GetTargetPathFraction(const JPC_PathConstraint* self) {
+	return to_jph(self)->GetTargetPathFraction();
+}
+
+JPC_API JPC_Vec2 JPC_PathConstraint_GetTotalLambdaPosition(const JPC_PathConstraint* self) {
+	return to_jpc(to_jph(self)->GetTotalLambdaPosition());
+}
+
+JPC_API float JPC_PathConstraint_GetTotalLambdaPositionLimits(const JPC_PathConstraint* self) {
+	return to_jph(self)->GetTotalLambdaPositionLimits();
+}
+
+JPC_API float JPC_PathConstraint_GetTotalLambdaMotor(const JPC_PathConstraint* self) {
+	return to_jph(self)->GetTotalLambdaMotor();
+}
+
+JPC_API JPC_Vec3 JPC_PathConstraint_GetTotalLambdaRotation(const JPC_PathConstraint* self) {
+	return to_jpc(to_jph(self)->GetTotalLambdaRotation());
+}
+
+JPC_IMPL void JPC_PathConstraintSettings_to_jpc(
+	JPC_PathConstraintSettings* outJpc,
+	const JPH::PathConstraintSettings* inJph)
+{
+	JPC_ConstraintSettings_to_jpc(&outJpc->ConstraintSettings, inJph);
+
+	outJpc->Path = const_cast<JPC_PathConstraintPath*>(to_jpc(inJph->mPath.GetPtr()));
+	outJpc->PathPosition = to_jpc(inJph->mPathPosition);
+	outJpc->PathRotation = to_jpc(inJph->mPathRotation);
+	outJpc->PathFraction = inJph->mPathFraction;
+	outJpc->MaxFrictionForce = inJph->mMaxFrictionForce;
+	JPC_MotorSettings_to_jpc(&outJpc->PositionMotorSettings, &inJph->mPositionMotorSettings);
+	outJpc->RotationConstraintType = static_cast<JPC_PathRotationConstraintType>(inJph->mRotationConstraintType);
+}
+
+JPC_IMPL void JPC_PathConstraintSettings_to_jph(
+	const JPC_PathConstraintSettings* inJpc,
+	JPH::PathConstraintSettings* outJph)
+{
+	JPC_ConstraintSettings_to_jph(&inJpc->ConstraintSettings, outJph);
+
+	outJph->mPath = to_jph(inJpc->Path);
+	outJph->mPathPosition = to_jph(inJpc->PathPosition);
+	outJph->mPathRotation = to_jph(inJpc->PathRotation);
+	outJph->mPathFraction = inJpc->PathFraction;
+	outJph->mMaxFrictionForce = inJpc->MaxFrictionForce;
+	JPC_MotorSettings_to_jph(&inJpc->PositionMotorSettings, &outJph->mPositionMotorSettings);
+	outJph->mRotationConstraintType = static_cast<JPH::EPathRotationConstraintType>(inJpc->RotationConstraintType);
+}
+
+JPC_API void JPC_PathConstraintSettings_default(JPC_PathConstraintSettings* settings) {
+	JPH::PathConstraintSettings defaultSettings{};
+	JPC_PathConstraintSettings_to_jpc(settings, &defaultSettings);
+}
+
+JPC_API JPC_PathConstraint* JPC_PathConstraintSettings_Create(
+	const JPC_PathConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2)
+{
+	JPH::PathConstraintSettings jphSettings;
+	JPC_PathConstraintSettings_to_jph(self, &jphSettings);
+
+	JPH::PathConstraint* outJph = new JPH::PathConstraint(*to_jph(inBody1), *to_jph(inBody2), jphSettings);
+	return (JPC_PathConstraint*)outJph;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PhysicsMaterial
+
+OPAQUE_WRAPPER(JPC_PhysicsMaterial, JPH::PhysicsMaterial)
+
+JPC_API uint32_t JPC_PhysicsMaterial_GetRefCount(const JPC_PhysicsMaterial* self) {
+	return to_jph(self)->GetRefCount();
+}
+
+JPC_API void JPC_PhysicsMaterial_AddRef(const JPC_PhysicsMaterial* self) {
+	to_jph(self)->AddRef();
+}
+
+JPC_API void JPC_PhysicsMaterial_Release(const JPC_PhysicsMaterial* self) {
+	to_jph(self)->Release();
+}
+
+JPC_API const char* JPC_PhysicsMaterial_GetDebugName(const JPC_PhysicsMaterial* self) {
+	return to_jph(self)->GetDebugName();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// JPC_CharacterContactListenerBridge
+
+class JPC_CharacterContactListenerBridge final : public JPH::CharacterContactListener {
+public:
+	explicit JPC_CharacterContactListenerBridge(void* self, JPC_CharacterContactListenerFns fns)
+		: self(self), fns(fns) {}
+
+	void OnAdjustBodyVelocity(
+		const JPH::CharacterVirtual* inCharacter,
+		const JPH::Body& inBody2,
+		JPH::Vec3& ioLinearVelocity,
+		JPH::Vec3& ioAngularVelocity) override
+	{
+		if (fns.OnAdjustBodyVelocity == nullptr) return;
+		JPC_Vec3 linear = to_jpc(ioLinearVelocity);
+		JPC_Vec3 angular = to_jpc(ioAngularVelocity);
+		fns.OnAdjustBodyVelocity(self, to_jpc(inCharacter), to_jpc(&inBody2), &linear, &angular);
+		ioLinearVelocity = to_jph(linear);
+		ioAngularVelocity = to_jph(angular);
+	}
+
+	bool OnContactValidate(
+		const JPH::CharacterVirtual* inCharacter,
+		const JPH::BodyID& inBodyID2,
+		const JPH::SubShapeID& inSubShapeID2) override
+	{
+		if (fns.OnContactValidate == nullptr) return true;
+		return fns.OnContactValidate(self, to_jpc(inCharacter), to_jpc(inBodyID2), to_jpc(inSubShapeID2));
+	}
+
+	void OnContactAdded(
+		const JPH::CharacterVirtual* inCharacter,
+		const JPH::BodyID& inBodyID2,
+		const JPH::SubShapeID& inSubShapeID2,
+		JPH::RVec3Arg inContactPosition,
+		JPH::Vec3Arg inContactNormal,
+		JPH::CharacterContactSettings& ioSettings) override
+	{
+		if (fns.OnContactAdded == nullptr) return;
+		JPC_CharacterContactSettings settings = {
+			ioSettings.mCanPushCharacter,
+			ioSettings.mCanReceiveImpulses
+		};
+		fns.OnContactAdded(
+			self,
+			to_jpc(inCharacter),
+			to_jpc(inBodyID2),
+			to_jpc(inSubShapeID2),
+			to_jpc(inContactPosition),
+			to_jpc(inContactNormal),
+			&settings);
+		ioSettings.mCanPushCharacter = settings.CanPushCharacter;
+		ioSettings.mCanReceiveImpulses = settings.CanReceiveImpulses;
+	}
+
+	void OnContactPersisted(
+		const JPH::CharacterVirtual* inCharacter,
+		const JPH::BodyID& inBodyID2,
+		const JPH::SubShapeID& inSubShapeID2,
+		JPH::RVec3Arg inContactPosition,
+		JPH::Vec3Arg inContactNormal,
+		JPH::CharacterContactSettings& ioSettings) override
+	{
+		if (fns.OnContactPersisted == nullptr) return;
+		JPC_CharacterContactSettings settings = {
+			ioSettings.mCanPushCharacter,
+			ioSettings.mCanReceiveImpulses
+		};
+		fns.OnContactPersisted(
+			self,
+			to_jpc(inCharacter),
+			to_jpc(inBodyID2),
+			to_jpc(inSubShapeID2),
+			to_jpc(inContactPosition),
+			to_jpc(inContactNormal),
+			&settings);
+		ioSettings.mCanPushCharacter = settings.CanPushCharacter;
+		ioSettings.mCanReceiveImpulses = settings.CanReceiveImpulses;
+	}
+
+	void OnContactSolve(
+		const JPH::CharacterVirtual* inCharacter,
+		const JPH::BodyID& inBodyID2,
+		const JPH::SubShapeID& inSubShapeID2,
+		JPH::RVec3Arg inContactPosition,
+		JPH::Vec3Arg inContactNormal,
+		JPH::Vec3Arg inContactVelocity,
+		const JPH::PhysicsMaterial* inContactMaterial,
+		JPH::Vec3Arg inCharacterVelocity,
+		JPH::Vec3& ioNewCharacterVelocity) override
+	{
+		if (fns.OnContactSolve == nullptr) return;
+		JPC_Vec3 newVelocity = to_jpc(ioNewCharacterVelocity);
+		fns.OnContactSolve(
+			self,
+			to_jpc(inCharacter),
+			to_jpc(inBodyID2),
+			to_jpc(inSubShapeID2),
+			to_jpc(inContactPosition),
+			to_jpc(inContactNormal),
+			to_jpc(inContactVelocity),
+			to_jpc(inContactMaterial),
+			to_jpc(inCharacterVelocity),
+			&newVelocity);
+		ioNewCharacterVelocity = to_jph(newVelocity);
+	}
+
+private:
+	void* self;
+	JPC_CharacterContactListenerFns fns;
+};
+
+OPAQUE_WRAPPER(JPC_CharacterContactListener, JPC_CharacterContactListenerBridge)
+DESTRUCTOR(JPC_CharacterContactListener)
+
+JPC_API JPC_CharacterContactListener* JPC_CharacterContactListener_new(
+	void* self,
+	JPC_CharacterContactListenerFns fns)
+{
+	return to_jpc(new JPC_CharacterContactListenerBridge(self, fns));
+}
+
+JPC_API void JPC_CharacterVirtual_SetListener(
+	JPC_CharacterVirtual* self,
+	JPC_CharacterContactListener* inListener)
+{
+	to_jph(self)->SetListener(to_jph(inListener));
+}
+
+JPC_API JPC_CharacterContactListener* JPC_CharacterVirtual_GetListener(
+	const JPC_CharacterVirtual* self)
+{
+	return to_jpc(static_cast<JPC_CharacterContactListenerBridge*>(to_jph(self)->GetListener()));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleEngineSettings
+
+JPC_API void JPC_VehicleEngineSettings_default(JPC_VehicleEngineSettings* object) {
+	JPH::VehicleEngineSettings d;
+	object->MaxTorque      = d.mMaxTorque;
+	object->MinRPM         = d.mMinRPM;
+	object->MaxRPM         = d.mMaxRPM;
+	object->Inertia        = d.mInertia;
+	object->AngularDamping = d.mAngularDamping;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleTransmissionSettings
+
+JPC_API void JPC_VehicleTransmissionSettings_default(JPC_VehicleTransmissionSettings* object) {
+	JPH::VehicleTransmissionSettings d;
+	object->Mode              = static_cast<JPC_VehicleTransmissionMode>(d.mMode);
+	object->SwitchUpRPM       = d.mShiftUpRPM;
+	object->SwitchDownRPM     = d.mShiftDownRPM;
+	object->SwitchTime        = d.mSwitchTime;
+	object->ClutchReleaseTime = d.mClutchReleaseTime;
+	object->SwitchLatency     = d.mSwitchLatency;
+	object->ClutchStrength    = d.mClutchStrength;
+
+	object->GearRatiosLen = (uint)std::min(d.mGearRatios.size(), (size_t)10);
+	for (uint i = 0; i < object->GearRatiosLen; i++)
+		object->GearRatios[i] = d.mGearRatios[i];
+
+	object->ReverseGearRatiosLen = (uint)std::min(d.mReverseGearRatios.size(), (size_t)4);
+	for (uint i = 0; i < object->ReverseGearRatiosLen; i++)
+		object->ReverseGearRatios[i] = d.mReverseGearRatios[i];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleDifferentialSettings
+
+JPC_API void JPC_VehicleDifferentialSettings_default(JPC_VehicleDifferentialSettings* object) {
+	JPH::VehicleDifferentialSettings d;
+	object->LeftWheel          = d.mLeftWheel;
+	object->RightWheel         = d.mRightWheel;
+	object->DifferentialRatio  = d.mDifferentialRatio;
+	object->LeftRightSplit     = d.mLeftRightSplit;
+	object->LimitedSlipRatio   = d.mLimitedSlipRatio;
+	object->EngineTorqueRatio  = d.mEngineTorqueRatio;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// WheelSettingsWV
+
+OPAQUE_WRAPPER(JPC_WheelSettingsWV, JPH::WheelSettingsWV)
+
+JPC_API JPC_WheelSettingsWV* JPC_WheelSettingsWV_new() {
+	auto* p = new JPH::WheelSettingsWV();
+	p->AddRef();
+	return to_jpc(p);
+}
+
+JPC_API void JPC_WheelSettingsWV_delete(JPC_WheelSettingsWV* self) {
+	to_jph(self)->Release();
+}
+
+JPC_API void JPC_WheelSettingsWV_SetPosition(JPC_WheelSettingsWV* self, JPC_Vec3 inPosition) {
+	to_jph(self)->mPosition = to_jph(inPosition);
+}
+
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetPosition(const JPC_WheelSettingsWV* self) {
+	return to_jpc(to_jph(self)->mPosition);
+}
+
+JPC_API void JPC_WheelSettingsWV_SetSuspensionDirection(JPC_WheelSettingsWV* self, JPC_Vec3 inDirection) {
+	to_jph(self)->mSuspensionDirection = to_jph(inDirection);
+}
+
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetSuspensionDirection(const JPC_WheelSettingsWV* self) {
+	return to_jpc(to_jph(self)->mSuspensionDirection);
+}
+
+JPC_API void JPC_WheelSettingsWV_SetSteeringAxis(JPC_WheelSettingsWV* self, JPC_Vec3 inAxis) {
+	to_jph(self)->mSteeringAxis = to_jph(inAxis);
+}
+
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetSteeringAxis(const JPC_WheelSettingsWV* self) {
+	return to_jpc(to_jph(self)->mSteeringAxis);
+}
+
+JPC_API void JPC_WheelSettingsWV_SetWheelUp(JPC_WheelSettingsWV* self, JPC_Vec3 inUp) {
+	to_jph(self)->mWheelUp = to_jph(inUp);
+}
+
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetWheelUp(const JPC_WheelSettingsWV* self) {
+	return to_jpc(to_jph(self)->mWheelUp);
+}
+
+JPC_API void JPC_WheelSettingsWV_SetWheelForward(JPC_WheelSettingsWV* self, JPC_Vec3 inForward) {
+	to_jph(self)->mWheelForward = to_jph(inForward);
+}
+
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetWheelForward(const JPC_WheelSettingsWV* self) {
+	return to_jpc(to_jph(self)->mWheelForward);
+}
+
+JPC_API void JPC_WheelSettingsWV_SetSuspensionMinLength(JPC_WheelSettingsWV* self, float inLength) {
+	to_jph(self)->mSuspensionMinLength = inLength;
+}
+
+JPC_API float JPC_WheelSettingsWV_GetSuspensionMinLength(const JPC_WheelSettingsWV* self) {
+	return to_jph(self)->mSuspensionMinLength;
+}
+
+JPC_API void JPC_WheelSettingsWV_SetSuspensionMaxLength(JPC_WheelSettingsWV* self, float inLength) {
+	to_jph(self)->mSuspensionMaxLength = inLength;
+}
+
+JPC_API float JPC_WheelSettingsWV_GetSuspensionMaxLength(const JPC_WheelSettingsWV* self) {
+	return to_jph(self)->mSuspensionMaxLength;
+}
+
+JPC_API void JPC_WheelSettingsWV_SetSuspensionPreloadLength(JPC_WheelSettingsWV* self, float inLength) {
+	to_jph(self)->mSuspensionPreloadLength = inLength;
+}
+
+JPC_API float JPC_WheelSettingsWV_GetSuspensionPreloadLength(const JPC_WheelSettingsWV* self) {
+	return to_jph(self)->mSuspensionPreloadLength;
+}
+
+JPC_API void JPC_WheelSettingsWV_SetRadius(JPC_WheelSettingsWV* self, float inRadius) {
+	to_jph(self)->mRadius = inRadius;
+}
+
+JPC_API float JPC_WheelSettingsWV_GetRadius(const JPC_WheelSettingsWV* self) {
+	return to_jph(self)->mRadius;
+}
+
+JPC_API void JPC_WheelSettingsWV_SetWidth(JPC_WheelSettingsWV* self, float inWidth) {
+	to_jph(self)->mWidth = inWidth;
+}
+
+JPC_API float JPC_WheelSettingsWV_GetWidth(const JPC_WheelSettingsWV* self) {
+	return to_jph(self)->mWidth;
+}
+
+JPC_API void JPC_WheelSettingsWV_SetMaxSteerAngle(JPC_WheelSettingsWV* self, float inAngle) {
+	to_jph(self)->mMaxSteerAngle = inAngle;
+}
+
+JPC_API float JPC_WheelSettingsWV_GetMaxSteerAngle(const JPC_WheelSettingsWV* self) {
+	return to_jph(self)->mMaxSteerAngle;
+}
+
+JPC_API void JPC_WheelSettingsWV_SetMaxBrakeTorque(JPC_WheelSettingsWV* self, float inTorque) {
+	to_jph(self)->mMaxBrakeTorque = inTorque;
+}
+
+JPC_API float JPC_WheelSettingsWV_GetMaxBrakeTorque(const JPC_WheelSettingsWV* self) {
+	return to_jph(self)->mMaxBrakeTorque;
+}
+
+JPC_API void JPC_WheelSettingsWV_SetMaxHandBrakeTorque(JPC_WheelSettingsWV* self, float inTorque) {
+	to_jph(self)->mMaxHandBrakeTorque = inTorque;
+}
+
+JPC_API float JPC_WheelSettingsWV_GetMaxHandBrakeTorque(const JPC_WheelSettingsWV* self) {
+	return to_jph(self)->mMaxHandBrakeTorque;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// WheeledVehicleControllerSettings
+
+OPAQUE_WRAPPER(JPC_WheeledVehicleControllerSettings, JPH::WheeledVehicleControllerSettings)
+
+JPC_API JPC_WheeledVehicleControllerSettings* JPC_WheeledVehicleControllerSettings_new() {
+	return to_jpc(new JPH::WheeledVehicleControllerSettings());
+}
+
+JPC_API void JPC_WheeledVehicleControllerSettings_delete(JPC_WheeledVehicleControllerSettings* self) {
+	delete to_jph(self);
+}
+
+JPC_API void JPC_WheeledVehicleControllerSettings_SetEngine(
+	JPC_WheeledVehicleControllerSettings* self,
+	const JPC_VehicleEngineSettings* inEngine)
+{
+	JPH::VehicleEngineSettings& engine = to_jph(self)->mEngine;
+	engine.mMaxTorque      = inEngine->MaxTorque;
+	engine.mMinRPM         = inEngine->MinRPM;
+	engine.mMaxRPM         = inEngine->MaxRPM;
+	engine.mInertia        = inEngine->Inertia;
+	engine.mAngularDamping = inEngine->AngularDamping;
+}
+
+JPC_API void JPC_WheeledVehicleControllerSettings_SetTransmission(
+	JPC_WheeledVehicleControllerSettings* self,
+	const JPC_VehicleTransmissionSettings* inTransmission)
+{
+	JPH::VehicleTransmissionSettings& t = to_jph(self)->mTransmission;
+	t.mMode              = static_cast<JPH::ETransmissionMode>(inTransmission->Mode);
+	t.mShiftUpRPM        = inTransmission->SwitchUpRPM;
+	t.mShiftDownRPM      = inTransmission->SwitchDownRPM;
+	t.mSwitchTime        = inTransmission->SwitchTime;
+	t.mClutchReleaseTime = inTransmission->ClutchReleaseTime;
+	t.mSwitchLatency     = inTransmission->SwitchLatency;
+	t.mClutchStrength    = inTransmission->ClutchStrength;
+
+	t.mGearRatios.clear();
+	for (uint i = 0; i < inTransmission->GearRatiosLen; i++)
+		t.mGearRatios.push_back(inTransmission->GearRatios[i]);
+
+	t.mReverseGearRatios.clear();
+	for (uint i = 0; i < inTransmission->ReverseGearRatiosLen; i++)
+		t.mReverseGearRatios.push_back(inTransmission->ReverseGearRatios[i]);
+}
+
+JPC_API void JPC_WheeledVehicleControllerSettings_AddDifferential(
+	JPC_WheeledVehicleControllerSettings* self,
+	const JPC_VehicleDifferentialSettings* inDifferential)
+{
+	JPH::VehicleDifferentialSettings d;
+	d.mLeftWheel         = inDifferential->LeftWheel;
+	d.mRightWheel        = inDifferential->RightWheel;
+	d.mDifferentialRatio = inDifferential->DifferentialRatio;
+	d.mLeftRightSplit    = inDifferential->LeftRightSplit;
+	d.mLimitedSlipRatio  = inDifferential->LimitedSlipRatio;
+	d.mEngineTorqueRatio = inDifferential->EngineTorqueRatio;
+	to_jph(self)->mDifferentials.push_back(d);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleConstraintSettings
+
+OPAQUE_WRAPPER(JPC_VehicleConstraintSettings, JPH::VehicleConstraintSettings)
+
+JPC_API JPC_VehicleConstraintSettings* JPC_VehicleConstraintSettings_new() {
+	return to_jpc(new JPH::VehicleConstraintSettings());
+}
+
+JPC_API void JPC_VehicleConstraintSettings_delete(JPC_VehicleConstraintSettings* self) {
+	delete to_jph(self);
+}
+
+JPC_API void JPC_VehicleConstraintSettings_SetUp(JPC_VehicleConstraintSettings* self, JPC_Vec3 inUp) {
+	to_jph(self)->mUp = to_jph(inUp);
+}
+
+JPC_API void JPC_VehicleConstraintSettings_SetForward(JPC_VehicleConstraintSettings* self, JPC_Vec3 inForward) {
+	to_jph(self)->mForward = to_jph(inForward);
+}
+
+JPC_API void JPC_VehicleConstraintSettings_SetMaxPitchRollAngle(JPC_VehicleConstraintSettings* self, float inAngle) {
+	to_jph(self)->mMaxPitchRollAngle = inAngle;
+}
+
+JPC_API void JPC_VehicleConstraintSettings_AddWheel(
+	JPC_VehicleConstraintSettings* self,
+	const JPC_WheelSettingsWV* inWheel)
+{
+	to_jph(self)->mWheels.push_back(const_cast<JPH::WheelSettingsWV*>(to_jph(inWheel)));
+}
+
+JPC_API void JPC_VehicleConstraintSettings_AddAntiRollBar(
+	JPC_VehicleConstraintSettings* self,
+	JPC_VehicleAntiRollBar inBar)
+{
+	JPH::VehicleAntiRollBar bar;
+	bar.mLeftWheel  = inBar.LeftWheel;
+	bar.mRightWheel = inBar.RightWheel;
+	bar.mStiffness  = inBar.Stiffness;
+	to_jph(self)->mAntiRollBars.push_back(bar);
+}
+
+JPC_API void JPC_VehicleConstraintSettings_SetController(
+	JPC_VehicleConstraintSettings* self,
+	const JPC_WheeledVehicleControllerSettings* inController)
+{
+	to_jph(self)->mController = const_cast<JPH::WheeledVehicleControllerSettings*>(to_jph(inController));
+}
+
+OPAQUE_WRAPPER(JPC_VehicleConstraint, JPH::VehicleConstraint)
+
+JPC_API JPC_VehicleConstraint* JPC_VehicleConstraintSettings_Create(
+	const JPC_VehicleConstraintSettings* self,
+	JPC_Body* inVehicleBody)
+{
+	JPH::VehicleConstraint* constraint = new JPH::VehicleConstraint(
+		*to_jph(inVehicleBody),
+		*to_jph(self));
+	constraint->AddRef();
+	return to_jpc(constraint);
+}
+
+JPC_API JPC_Constraint* JPC_VehicleConstraint_AsConstraint(JPC_VehicleConstraint* self) {
+	return to_jpc(static_cast<JPH::Constraint*>(to_jph(self)));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleConstraint runtime
+
+OPAQUE_WRAPPER(JPC_WheeledVehicleController, JPH::WheeledVehicleController)
+
+JPC_API JPC_WheeledVehicleController* JPC_VehicleConstraint_GetWheeledController(JPC_VehicleConstraint* self) {
+	return to_jpc(static_cast<JPH::WheeledVehicleController*>(to_jph(self)->GetController()));
+}
+
+JPC_API void JPC_WheeledVehicleController_SetDriverInput(
+	JPC_WheeledVehicleController* self,
+	float inForward,
+	float inRight,
+	float inBrake,
+	float inHandBrake)
+{
+	to_jph(self)->SetDriverInput(inForward, inRight, inBrake, inHandBrake);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleCollisionTester
+
+OPAQUE_WRAPPER(JPC_VehicleCollisionTester, JPH::VehicleCollisionTester)
+
+JPC_API JPC_VehicleCollisionTester* JPC_VehicleCollisionTesterRay_new(
+	JPC_ObjectLayer inObjectLayer,
+	JPC_Vec3 inUp,
+	float inMaxSlopeAngle)
+{
+	auto* tester = new JPH::VehicleCollisionTesterRay(inObjectLayer, to_jph(inUp), inMaxSlopeAngle);
+	tester->AddRef();
+	return to_jpc(static_cast<JPH::VehicleCollisionTester*>(tester));
+}
+
+JPC_API JPC_VehicleCollisionTester* JPC_VehicleCollisionTesterCastSphere_new(
+	JPC_ObjectLayer inObjectLayer,
+	float inRadius,
+	JPC_Vec3 inUp,
+	float inMaxSlopeAngle)
+{
+	auto* tester = new JPH::VehicleCollisionTesterCastSphere(inObjectLayer, inRadius, to_jph(inUp), inMaxSlopeAngle);
+	tester->AddRef();
+	return to_jpc(static_cast<JPH::VehicleCollisionTester*>(tester));
+}
+
+JPC_API JPC_VehicleCollisionTester* JPC_VehicleCollisionTesterCastCylinder_new(
+	JPC_ObjectLayer inObjectLayer,
+	float inConvexRadiusFraction)
+{
+	auto* tester = new JPH::VehicleCollisionTesterCastCylinder(inObjectLayer, inConvexRadiusFraction);
+	tester->AddRef();
+	return to_jpc(static_cast<JPH::VehicleCollisionTester*>(tester));
+}
+
+JPC_API void JPC_VehicleCollisionTester_delete(JPC_VehicleCollisionTester* self) {
+	to_jph(self)->Release();
+}
+
+JPC_API void JPC_VehicleConstraint_SetVehicleCollisionTester(
+	JPC_VehicleConstraint* self,
+	JPC_VehicleCollisionTester* inTester)
+{
+	to_jph(self)->SetVehicleCollisionTester(to_jph(inTester));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PhysicsSystem step listener
+
+JPC_API void JPC_PhysicsSystem_AddStepListener(JPC_PhysicsSystem* self, JPC_VehicleConstraint* inConstraint) {
+	to_jph(self)->AddStepListener(to_jph(inConstraint));
+}
+
+JPC_API void JPC_PhysicsSystem_RemoveStepListener(JPC_PhysicsSystem* self, JPC_VehicleConstraint* inConstraint) {
+	to_jph(self)->RemoveStepListener(to_jph(inConstraint));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SoftBodySharedSettings
+
+OPAQUE_WRAPPER(JPC_SoftBodySharedSettings, JPH::SoftBodySharedSettings)
+
+JPC_API JPC_SoftBodySharedSettings* JPC_SoftBodySharedSettings_new() {
+	auto* settings = new JPH::SoftBodySharedSettings();
+	settings->AddRef();
+	return to_jpc(settings);
+}
+
+JPC_API uint32_t JPC_SoftBodySharedSettings_GetRefCount(const JPC_SoftBodySharedSettings* self) {
+	return to_jph(self)->GetRefCount();
+}
+
+JPC_API void JPC_SoftBodySharedSettings_AddRef(const JPC_SoftBodySharedSettings* self) {
+	to_jph(self)->AddRef();
+}
+
+JPC_API void JPC_SoftBodySharedSettings_Release(const JPC_SoftBodySharedSettings* self) {
+	to_jph(self)->Release();
+}
+
+JPC_API void JPC_SoftBodySharedSettings_AddVertex(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyVertex* inVertex) {
+	JPH::SoftBodySharedSettings::Vertex v;
+	v.mPosition = JPH::Float3(inVertex->Position.x, inVertex->Position.y, inVertex->Position.z);
+	v.mVelocity = JPH::Float3(inVertex->Velocity.x, inVertex->Velocity.y, inVertex->Velocity.z);
+	v.mInvMass = inVertex->InvMass;
+	to_jph(self)->mVertices.push_back(v);
+}
+
+JPC_API void JPC_SoftBodySharedSettings_AddEdgeConstraint(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyEdgeConstraint* inEdge) {
+	JPH::SoftBodySharedSettings::Edge e;
+	e.mVertex[0] = inEdge->Vertex0;
+	e.mVertex[1] = inEdge->Vertex1;
+	e.mCompliance = inEdge->Compliance;
+	to_jph(self)->mEdgeConstraints.push_back(e);
+}
+
+JPC_API void JPC_SoftBodySharedSettings_AddFace(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyFace* inFace) {
+	JPH::SoftBodySharedSettings::Face f;
+	f.mVertex[0] = inFace->Vertex[0];
+	f.mVertex[1] = inFace->Vertex[1];
+	f.mVertex[2] = inFace->Vertex[2];
+	to_jph(self)->mFaces.push_back(f);
+}
+
+JPC_API void JPC_SoftBodySharedSettings_Optimize(JPC_SoftBodySharedSettings* self) {
+	to_jph(self)->Optimize();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SoftBodyCreationSettings
+
+JPC_IMPL JPH::SoftBodyCreationSettings JPC_SoftBodyCreationSettings_to_jph(const JPC_SoftBodyCreationSettings* settings) {
+	JPH::SoftBodyCreationSettings output{};
+
+	output.mSettings = to_jph(settings->Settings);
+	output.mPosition = to_jph(settings->Position);
+	output.mRotation = to_jph(settings->Rotation);
+	output.mUserData = settings->UserData;
+	output.mObjectLayer = settings->ObjectLayer;
+	output.mNumIterations = settings->NumIterations;
+	output.mLinearDamping = settings->LinearDamping;
+	output.mMaxLinearVelocity = settings->MaxLinearVelocity;
+	output.mRestitution = settings->Restitution;
+	output.mFriction = settings->Friction;
+	output.mPressure = settings->Pressure;
+	output.mGravityFactor = settings->GravityFactor;
+	output.mVertexRadius = settings->VertexRadius;
+	output.mUpdatePosition = settings->UpdatePosition;
+	output.mMakeRotationIdentity = settings->MakeRotationIdentity;
+	output.mAllowSleeping = settings->AllowSleeping;
+	output.mFacesDoubleSided = settings->FacesDoubleSided;
+
+	return output;
+}
+
+JPC_API void JPC_SoftBodyCreationSettings_default(JPC_SoftBodyCreationSettings* object) {
+	JPH::SoftBodyCreationSettings defaults{};
+
+	object->Settings = nullptr;
+	object->Position = to_jpc(defaults.mPosition);
+	object->Rotation = to_jpc(defaults.mRotation);
+	object->UserData = defaults.mUserData;
+	object->ObjectLayer = defaults.mObjectLayer;
+	object->NumIterations = defaults.mNumIterations;
+	object->LinearDamping = defaults.mLinearDamping;
+	object->MaxLinearVelocity = defaults.mMaxLinearVelocity;
+	object->Restitution = defaults.mRestitution;
+	object->Friction = defaults.mFriction;
+	object->Pressure = defaults.mPressure;
+	object->GravityFactor = defaults.mGravityFactor;
+	object->VertexRadius = defaults.mVertexRadius;
+	object->UpdatePosition = defaults.mUpdatePosition;
+	object->MakeRotationIdentity = defaults.mMakeRotationIdentity;
+	object->AllowSleeping = defaults.mAllowSleeping;
+	object->FacesDoubleSided = defaults.mFacesDoubleSided;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// BodyInterface soft body methods
+
+JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBody(JPC_BodyInterface* self, const JPC_SoftBodyCreationSettings* inSettings) {
+	return to_jpc(to_jph(self)->CreateSoftBody(JPC_SoftBodyCreationSettings_to_jph(inSettings)));
+}
+
+JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithID(JPC_BodyInterface* self, JPC_BodyID inBodyID, const JPC_SoftBodyCreationSettings* inSettings) {
+	return to_jpc(to_jph(self)->CreateSoftBodyWithID(to_jph(inBodyID), JPC_SoftBodyCreationSettings_to_jph(inSettings)));
+}
+
+JPC_API JPC_BodyID JPC_BodyInterface_CreateAndAddSoftBody(JPC_BodyInterface* self, const JPC_SoftBodyCreationSettings* inSettings, JPC_Activation inActivationMode) {
+	return to_jpc(to_jph(self)->CreateAndAddSoftBody(JPC_SoftBodyCreationSettings_to_jph(inSettings), to_jph(inActivationMode)));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// StateRecorder (wraps StateRecorderImpl)
+
+struct JPC_StateRecorderWrapper {
+	JPH::StateRecorderImpl recorder;
+	std::string cached_data;
+};
+
+OPAQUE_WRAPPER(JPC_StateRecorder, JPC_StateRecorderWrapper)
+DESTRUCTOR(JPC_StateRecorder)
+
+JPC_API JPC_StateRecorder* JPC_StateRecorder_new() {
+	return to_jpc(new JPC_StateRecorderWrapper());
+}
+
+JPC_API void JPC_StateRecorder_Clear(JPC_StateRecorder* self) {
+	to_jph(self)->recorder.Clear();
+}
+
+JPC_API void JPC_StateRecorder_Rewind(JPC_StateRecorder* self) {
+	to_jph(self)->recorder.Rewind();
+}
+
+JPC_API void JPC_StateRecorder_GetData(const JPC_StateRecorder* self, const uint8_t** outData, size_t* outLen) {
+	JPC_StateRecorderWrapper* wrapper = to_jph(const_cast<JPC_StateRecorder*>(self));
+	wrapper->cached_data = wrapper->recorder.GetData();
+	*outData = reinterpret_cast<const uint8_t*>(wrapper->cached_data.data());
+	*outLen = wrapper->cached_data.size();
+}
+
+JPC_API size_t JPC_StateRecorder_GetDataSize(const JPC_StateRecorder* self) {
+	return to_jph(const_cast<JPC_StateRecorder*>(self))->recorder.GetDataSize();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PhysicsSystem save/restore state
+
+JPC_API void JPC_PhysicsSystem_SaveState(JPC_PhysicsSystem* self, JPC_StateRecorder* inStateRecorder) {
+	to_jph(self)->SaveState(to_jph(inStateRecorder)->recorder);
+}
+
+JPC_API bool JPC_PhysicsSystem_RestoreState(JPC_PhysicsSystem* self, JPC_StateRecorder* inStateRecorder) {
+	return to_jph(self)->RestoreState(to_jph(inStateRecorder)->recorder);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// RagdollSettings
+
+OPAQUE_WRAPPER(JPC_Ragdoll, JPH::Ragdoll)
+OPAQUE_WRAPPER(JPC_RagdollSettings, JPH::RagdollSettings)
+
+JPC_API JPC_RagdollSettings* JPC_RagdollSettings_new() {
+	auto* settings = new JPH::RagdollSettings();
+	settings->AddRef();
+	return to_jpc(settings);
+}
+
+JPC_API void JPC_RagdollSettings_delete(JPC_RagdollSettings* self) {
+	delete to_jph(self);
+}
+
+JPC_API uint32_t JPC_RagdollSettings_GetRefCount(const JPC_RagdollSettings* self) {
+	return to_jph(self)->GetRefCount();
+}
+
+JPC_API void JPC_RagdollSettings_AddRef(const JPC_RagdollSettings* self) {
+	to_jph(self)->AddRef();
+}
+
+JPC_API void JPC_RagdollSettings_Release(const JPC_RagdollSettings* self) {
+	to_jph(self)->Release();
+}
+
+JPC_API uint JPC_RagdollSettings_GetPartCount(const JPC_RagdollSettings* self) {
+	return static_cast<uint>(to_jph(self)->mParts.size());
+}
+
+JPC_API void JPC_RagdollSettings_AddPart(JPC_RagdollSettings* self, const JPC_BodyCreationSettings* inBodyCreationSettings) {
+	JPH::RagdollSettings::Part part;
+
+	part.mPosition = to_jph(inBodyCreationSettings->Position);
+	part.mRotation = to_jph(inBodyCreationSettings->Rotation);
+	part.mLinearVelocity = to_jph(inBodyCreationSettings->LinearVelocity);
+	part.mAngularVelocity = to_jph(inBodyCreationSettings->AngularVelocity);
+	part.mUserData = inBodyCreationSettings->UserData;
+	part.mObjectLayer = inBodyCreationSettings->ObjectLayer;
+	part.mMotionType = to_jph(inBodyCreationSettings->MotionType);
+	part.mAllowedDOFs = to_jph(inBodyCreationSettings->AllowedDOFs);
+	part.mAllowDynamicOrKinematic = inBodyCreationSettings->AllowDynamicOrKinematic;
+	part.mIsSensor = inBodyCreationSettings->IsSensor;
+	part.mCollideKinematicVsNonDynamic = inBodyCreationSettings->CollideKinematicVsNonDynamic;
+	part.mUseManifoldReduction = inBodyCreationSettings->UseManifoldReduction;
+	part.mApplyGyroscopicForce = inBodyCreationSettings->ApplyGyroscopicForce;
+	part.mMotionQuality = to_jph(inBodyCreationSettings->MotionQuality);
+	part.mEnhancedInternalEdgeRemoval = inBodyCreationSettings->EnhancedInternalEdgeRemoval;
+	part.mAllowSleeping = inBodyCreationSettings->AllowSleeping;
+	part.mFriction = inBodyCreationSettings->Friction;
+	part.mRestitution = inBodyCreationSettings->Restitution;
+	part.mLinearDamping = inBodyCreationSettings->LinearDamping;
+	part.mAngularDamping = inBodyCreationSettings->AngularDamping;
+	part.mMaxLinearVelocity = inBodyCreationSettings->MaxLinearVelocity;
+	part.mMaxAngularVelocity = inBodyCreationSettings->MaxAngularVelocity;
+	part.mGravityFactor = inBodyCreationSettings->GravityFactor;
+	part.mNumVelocityStepsOverride = inBodyCreationSettings->NumVelocityStepsOverride;
+	part.mNumPositionStepsOverride = inBodyCreationSettings->NumPositionStepsOverride;
+	part.mOverrideMassProperties = to_jph(inBodyCreationSettings->OverrideMassProperties);
+	part.mInertiaMultiplier = inBodyCreationSettings->InertiaMultiplier;
+	part.SetShape(to_jph(inBodyCreationSettings->Shape));
+	part.mToParent = nullptr;
+
+	to_jph(self)->mParts.push_back(part);
+}
+
+JPC_API JPC_Ragdoll* JPC_RagdollSettings_CreateRagdoll(
+	const JPC_RagdollSettings* self,
+	JPC_GroupID inCollisionGroup,
+	uint64_t inUserData,
+	JPC_PhysicsSystem* inPhysicsSystem)
+{
+	JPH::Ragdoll* ragdoll = to_jph(self)->CreateRagdoll(
+		inCollisionGroup,
+		inUserData,
+		to_jph(inPhysicsSystem));
+	return to_jpc(ragdoll);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Ragdoll runtime
+
+JPC_API void JPC_Ragdoll_delete(JPC_Ragdoll* self) {
+	delete to_jph(self);
+}
+
+JPC_API void JPC_Ragdoll_AddToPhysicsSystem(JPC_Ragdoll* self, JPC_Activation inActivationMode, bool inLockBodies) {
+	to_jph(self)->AddToPhysicsSystem(to_jph(inActivationMode), inLockBodies);
+}
+
+JPC_API void JPC_Ragdoll_RemoveFromPhysicsSystem(JPC_Ragdoll* self, bool inLockBodies) {
+	to_jph(self)->RemoveFromPhysicsSystem(inLockBodies);
+}
+
+JPC_API void JPC_Ragdoll_Activate(JPC_Ragdoll* self, bool inLockBodies) {
+	to_jph(self)->Activate(inLockBodies);
+}
+
+JPC_API uint JPC_Ragdoll_GetBodyCount(const JPC_Ragdoll* self) {
+	return static_cast<uint>(to_jph(self)->GetBodyCount());
+}
+
+JPC_API JPC_BodyID JPC_Ragdoll_GetBodyID(const JPC_Ragdoll* self, uint inBodyIndex) {
+	return to_jpc(to_jph(self)->GetBodyID(static_cast<int>(inBodyIndex)));
 }

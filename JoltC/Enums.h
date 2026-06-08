@@ -380,3 +380,29 @@ typedef enum JPC_MotorState: uint32_t {
 ENSURE_ENUM_EQ(JPC_MOTOR_STATE_OFF, JPH::EMotorState::Off)
 ENSURE_ENUM_EQ(JPC_MOTOR_STATE_VELOCITY, JPH::EMotorState::Velocity)
 ENSURE_ENUM_EQ(JPC_MOTOR_STATE_POSITION, JPH::EMotorState::Position)
+
+// EPathRotationConstraintType (no explicit underlying type — matches JPH::EPathRotationConstraintType which defaults to int)
+typedef enum JPC_PathRotationConstraintType {
+	JPC_PATH_ROTATION_FREE = 0,
+	JPC_PATH_ROTATION_CONSTRAIN_AROUND_TANGENT = 1,
+	JPC_PATH_ROTATION_CONSTRAIN_AROUND_NORMAL = 2,
+	JPC_PATH_ROTATION_CONSTRAIN_AROUND_BINORMAL = 3,
+	JPC_PATH_ROTATION_CONSTRAIN_TO_PATH = 4,
+	JPC_PATH_ROTATION_FULL_CONSTRAIN = 5,
+} JPC_PathRotationConstraintType;
+
+ENSURE_ENUM_EQ(JPC_PATH_ROTATION_FREE, JPH::EPathRotationConstraintType::Free)
+ENSURE_ENUM_EQ(JPC_PATH_ROTATION_CONSTRAIN_AROUND_TANGENT, JPH::EPathRotationConstraintType::ConstrainAroundTangent)
+ENSURE_ENUM_EQ(JPC_PATH_ROTATION_CONSTRAIN_AROUND_NORMAL, JPH::EPathRotationConstraintType::ConstrainAroundNormal)
+ENSURE_ENUM_EQ(JPC_PATH_ROTATION_CONSTRAIN_AROUND_BINORMAL, JPH::EPathRotationConstraintType::ConstrainAroundBinormal)
+ENSURE_ENUM_EQ(JPC_PATH_ROTATION_CONSTRAIN_TO_PATH, JPH::EPathRotationConstraintType::ConstrainToPath)
+ENSURE_ENUM_EQ(JPC_PATH_ROTATION_FULL_CONSTRAIN, JPH::EPathRotationConstraintType::FullyConstrained)
+
+// ETransmissionMode
+typedef enum JPC_VehicleTransmissionMode: uint8_t {
+	JPC_VEHICLE_TRANSMISSION_MODE_AUTO   = 0,
+	JPC_VEHICLE_TRANSMISSION_MODE_MANUAL = 1,
+} JPC_VehicleTransmissionMode;
+
+ENSURE_ENUM_EQ(JPC_VEHICLE_TRANSMISSION_MODE_AUTO,   JPH::ETransmissionMode::Auto)
+ENSURE_ENUM_EQ(JPC_VEHICLE_TRANSMISSION_MODE_MANUAL, JPH::ETransmissionMode::Manual)

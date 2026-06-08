@@ -1947,6 +1947,777 @@ typedef struct JPC_CharacterVirtual_SetShapeArgs {
 
 JPC_API bool JPC_CharacterVirtual_SetShape(JPC_CharacterVirtual* self, JPC_CharacterVirtual_SetShapeArgs* args);
 
+////////////////////////////////////////////////////////////////////////////////
+// AABox
+
+typedef struct JPC_AABox {
+	JPC_Vec3 Min;
+	JPC_Vec3 Max;
+} JPC_AABox;
+
+////////////////////////////////////////////////////////////////////////////////
+// HeightFieldShapeSettings -> ShapeSettings
+
+typedef struct JPC_HeightFieldShapeSettings {
+	// ShapeSettings
+	uint64_t UserData;
+
+	// HeightFieldShapeSettings
+	JPC_Vec3 Offset;
+	JPC_Vec3 Scale;
+	uint32_t SampleCount;
+	float MinHeightValue;
+	float MaxHeightValue;
+	uint32_t BlockSize;
+	uint32_t BitsPerSample;
+	const float* HeightSamples;
+	size_t HeightSamplesLen;
+	const uint8_t* MaterialIndices;
+	size_t MaterialIndicesLen;
+	float ActiveEdgeCosThresholdAngle;
+} JPC_HeightFieldShapeSettings;
+
+JPC_API void JPC_HeightFieldShapeSettings_default(JPC_HeightFieldShapeSettings* object);
+JPC_API bool JPC_HeightFieldShapeSettings_Create(const JPC_HeightFieldShapeSettings* self, JPC_Shape** outShape, JPC_String** outError);
+
+////////////////////////////////////////////////////////////////////////////////
+// ScaledShapeSettings -> DecoratedShapeSettings -> ShapeSettings
+
+typedef struct JPC_ScaledShapeSettings {
+	// ShapeSettings
+	uint64_t UserData;
+
+	// DecoratedShapeSettings
+	const JPC_Shape* InnerShape;
+
+	// ScaledShapeSettings
+	JPC_Vec3 Scale;
+} JPC_ScaledShapeSettings;
+
+JPC_API void JPC_ScaledShapeSettings_default(JPC_ScaledShapeSettings* object);
+JPC_API bool JPC_ScaledShapeSettings_Create(const JPC_ScaledShapeSettings* self, JPC_Shape** outShape, JPC_String** outError);
+
+////////////////////////////////////////////////////////////////////////////////
+// RotatedTranslatedShapeSettings -> DecoratedShapeSettings -> ShapeSettings
+
+typedef struct JPC_RotatedTranslatedShapeSettings {
+	// ShapeSettings
+	uint64_t UserData;
+
+	// DecoratedShapeSettings
+	const JPC_Shape* InnerShape;
+
+	// RotatedTranslatedShapeSettings
+	JPC_Vec3 Position;
+	JPC_Quat Rotation;
+} JPC_RotatedTranslatedShapeSettings;
+
+JPC_API void JPC_RotatedTranslatedShapeSettings_default(JPC_RotatedTranslatedShapeSettings* object);
+JPC_API bool JPC_RotatedTranslatedShapeSettings_Create(const JPC_RotatedTranslatedShapeSettings* self, JPC_Shape** outShape, JPC_String** outError);
+
+////////////////////////////////////////////////////////////////////////////////
+// OffsetCenterOfMassShapeSettings -> DecoratedShapeSettings -> ShapeSettings
+
+typedef struct JPC_OffsetCenterOfMassShapeSettings {
+	// ShapeSettings
+	uint64_t UserData;
+
+	// DecoratedShapeSettings
+	const JPC_Shape* InnerShape;
+
+	// OffsetCenterOfMassShapeSettings
+	JPC_Vec3 Offset;
+} JPC_OffsetCenterOfMassShapeSettings;
+
+JPC_API void JPC_OffsetCenterOfMassShapeSettings_default(JPC_OffsetCenterOfMassShapeSettings* object);
+JPC_API bool JPC_OffsetCenterOfMassShapeSettings_Create(const JPC_OffsetCenterOfMassShapeSettings* self, JPC_Shape** outShape, JPC_String** outError);
+
+////////////////////////////////////////////////////////////////////////////////
+// TaperedCapsuleShapeSettings -> ConvexShapeSettings -> ShapeSettings
+
+typedef struct JPC_TaperedCapsuleShapeSettings {
+	// ShapeSettings
+	uint64_t UserData;
+
+	// ConvexShapeSettings
+	float Density;
+
+	// TaperedCapsuleShapeSettings
+	float HalfHeightOfTaperedCylinder;
+	float TopRadius;
+	float BottomRadius;
+} JPC_TaperedCapsuleShapeSettings;
+
+JPC_API void JPC_TaperedCapsuleShapeSettings_default(JPC_TaperedCapsuleShapeSettings* object);
+JPC_API bool JPC_TaperedCapsuleShapeSettings_Create(const JPC_TaperedCapsuleShapeSettings* self, JPC_Shape** outShape, JPC_String** outError);
+
+////////////////////////////////////////////////////////////////////////////////
+// TaperedCylinderShapeSettings -> ConvexShapeSettings -> ShapeSettings
+
+typedef struct JPC_TaperedCylinderShapeSettings {
+	// ShapeSettings
+	uint64_t UserData;
+
+	// ConvexShapeSettings
+	float Density;
+
+	// TaperedCylinderShapeSettings
+	float HalfHeight;
+	float TopRadius;
+	float BottomRadius;
+	float ConvexRadius;
+} JPC_TaperedCylinderShapeSettings;
+
+JPC_API void JPC_TaperedCylinderShapeSettings_default(JPC_TaperedCylinderShapeSettings* object);
+JPC_API bool JPC_TaperedCylinderShapeSettings_Create(const JPC_TaperedCylinderShapeSettings* self, JPC_Shape** outShape, JPC_String** outError);
+
+////////////////////////////////////////////////////////////////////////////////
+// EmptyShapeSettings -> ShapeSettings
+
+typedef struct JPC_EmptyShapeSettings {
+	// ShapeSettings
+	uint64_t UserData;
+
+	// EmptyShapeSettings
+	JPC_Vec3 CenterOfMass;
+} JPC_EmptyShapeSettings;
+
+JPC_API void JPC_EmptyShapeSettings_default(JPC_EmptyShapeSettings* object);
+JPC_API bool JPC_EmptyShapeSettings_Create(const JPC_EmptyShapeSettings* self, JPC_Shape** outShape, JPC_String** outError);
+
+////////////////////////////////////////////////////////////////////////////////
+// Body collision group
+
+JPC_API JPC_CollisionGroup JPC_Body_GetCollisionGroup(const JPC_Body* self);
+JPC_API void JPC_Body_SetCollisionGroup(JPC_Body* self, const JPC_CollisionGroup* inGroup);
+
+////////////////////////////////////////////////////////////////////////////////
+// BodyInterface extras
+
+JPC_API void JPC_BodyInterface_ActivateConstraint(JPC_BodyInterface* self, const JPC_TwoBodyConstraint* inConstraint);
+JPC_API void JPC_BodyInterface_ActivateBodiesInAABox(
+	JPC_BodyInterface* self,
+	const JPC_AABox* inBox,
+	const JPC_BroadPhaseLayerFilter* inBroadPhaseLayerFilter,
+	const JPC_ObjectLayerFilter* inObjectLayerFilter);
+
+////////////////////////////////////////////////////////////////////////////////
+// PointConstraint
+
+typedef struct JPC_PointConstraint JPC_PointConstraint;
+
+typedef struct JPC_PointConstraintSettings {
+	JPC_ConstraintSettings ConstraintSettings;
+
+	JPC_ConstraintSpace Space;
+	JPC_RVec3 Point1;
+	JPC_RVec3 Point2;
+} JPC_PointConstraintSettings;
+
+JPC_API void JPC_PointConstraintSettings_default(JPC_PointConstraintSettings* settings);
+JPC_API JPC_PointConstraint* JPC_PointConstraintSettings_Create(
+	const JPC_PointConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2);
+
+JPC_API JPC_Vec3 JPC_PointConstraint_GetTotalLambdaPosition(const JPC_PointConstraint* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// ConeConstraint
+
+typedef struct JPC_ConeConstraint JPC_ConeConstraint;
+
+typedef struct JPC_ConeConstraintSettings {
+	JPC_ConstraintSettings ConstraintSettings;
+
+	JPC_ConstraintSpace Space;
+	JPC_RVec3 Point1;
+	JPC_Vec3 TwistAxis1;
+	JPC_RVec3 Point2;
+	JPC_Vec3 TwistAxis2;
+	float HalfConeAngle;
+} JPC_ConeConstraintSettings;
+
+JPC_API void JPC_ConeConstraintSettings_default(JPC_ConeConstraintSettings* settings);
+JPC_API JPC_ConeConstraint* JPC_ConeConstraintSettings_Create(
+	const JPC_ConeConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2);
+
+JPC_API void JPC_ConeConstraint_SetHalfConeAngle(JPC_ConeConstraint* self, float inHalfConeAngle);
+JPC_API float JPC_ConeConstraint_GetCosHalfConeAngle(const JPC_ConeConstraint* self);
+JPC_API JPC_Vec3 JPC_ConeConstraint_GetTotalLambdaPosition(const JPC_ConeConstraint* self);
+JPC_API float JPC_ConeConstraint_GetTotalLambdaRotation(const JPC_ConeConstraint* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// PulleyConstraint
+
+typedef struct JPC_PulleyConstraint JPC_PulleyConstraint;
+
+typedef struct JPC_PulleyConstraintSettings {
+	JPC_ConstraintSettings ConstraintSettings;
+
+	JPC_ConstraintSpace Space;
+	JPC_RVec3 BodyPoint1;
+	JPC_RVec3 FixedPoint1;
+	JPC_RVec3 BodyPoint2;
+	JPC_RVec3 FixedPoint2;
+	float Ratio;
+	float MinLength;
+	float MaxLength;
+} JPC_PulleyConstraintSettings;
+
+JPC_API void JPC_PulleyConstraintSettings_default(JPC_PulleyConstraintSettings* settings);
+JPC_API JPC_PulleyConstraint* JPC_PulleyConstraintSettings_Create(
+	const JPC_PulleyConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2);
+
+JPC_API void JPC_PulleyConstraint_SetLength(JPC_PulleyConstraint* self, float inMinLength, float inMaxLength);
+JPC_API float JPC_PulleyConstraint_GetMinLength(const JPC_PulleyConstraint* self);
+JPC_API float JPC_PulleyConstraint_GetMaxLength(const JPC_PulleyConstraint* self);
+JPC_API float JPC_PulleyConstraint_GetCurrentLength(const JPC_PulleyConstraint* self);
+JPC_API float JPC_PulleyConstraint_GetTotalLambdaPosition(const JPC_PulleyConstraint* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// GearConstraint
+
+typedef struct JPC_GearConstraint JPC_GearConstraint;
+
+typedef struct JPC_GearConstraintSettings {
+	JPC_ConstraintSettings ConstraintSettings;
+
+	JPC_ConstraintSpace Space;
+	JPC_Vec3 HingeAxis1;
+	JPC_Vec3 HingeAxis2;
+	float Ratio;
+} JPC_GearConstraintSettings;
+
+JPC_API void JPC_GearConstraintSettings_default(JPC_GearConstraintSettings* settings);
+JPC_API JPC_GearConstraint* JPC_GearConstraintSettings_Create(
+	const JPC_GearConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2);
+
+JPC_API void JPC_GearConstraint_SetConstraints(
+	JPC_GearConstraint* self,
+	const JPC_Constraint* inGear1,
+	const JPC_Constraint* inGear2);
+JPC_API float JPC_GearConstraint_GetTotalLambda(const JPC_GearConstraint* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// RackAndPinionConstraint
+
+typedef struct JPC_RackAndPinionConstraint JPC_RackAndPinionConstraint;
+
+typedef struct JPC_RackAndPinionConstraintSettings {
+	JPC_ConstraintSettings ConstraintSettings;
+
+	JPC_ConstraintSpace Space;
+	JPC_Vec3 HingeAxis;
+	JPC_Vec3 SliderAxis;
+	float Ratio;
+} JPC_RackAndPinionConstraintSettings;
+
+JPC_API void JPC_RackAndPinionConstraintSettings_default(JPC_RackAndPinionConstraintSettings* settings);
+JPC_API JPC_RackAndPinionConstraint* JPC_RackAndPinionConstraintSettings_Create(
+	const JPC_RackAndPinionConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2);
+
+JPC_API void JPC_RackAndPinionConstraint_SetConstraints(
+	JPC_RackAndPinionConstraint* self,
+	const JPC_Constraint* inPinion,
+	const JPC_Constraint* inRack);
+JPC_API float JPC_RackAndPinionConstraint_GetTotalLambda(const JPC_RackAndPinionConstraint* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// SwingTwistConstraint
+
+typedef struct JPC_SwingTwistConstraint JPC_SwingTwistConstraint;
+
+typedef struct JPC_SwingTwistConstraintSettings {
+	JPC_ConstraintSettings ConstraintSettings;
+
+	JPC_ConstraintSpace Space;
+
+	JPC_RVec3 Position1;
+	JPC_Vec3 TwistAxis1;
+	JPC_Vec3 PlaneAxis1;
+
+	JPC_RVec3 Position2;
+	JPC_Vec3 TwistAxis2;
+	JPC_Vec3 PlaneAxis2;
+
+	JPC_SwingType SwingType;
+
+	float NormalHalfConeAngle;
+	float PlaneHalfConeAngle;
+	float TwistMinAngle;
+	float TwistMaxAngle;
+	float MaxFrictionTorque;
+
+	JPC_MotorSettings SwingMotorSettings;
+	JPC_MotorSettings TwistMotorSettings;
+} JPC_SwingTwistConstraintSettings;
+
+JPC_API void JPC_SwingTwistConstraintSettings_default(JPC_SwingTwistConstraintSettings* settings);
+JPC_API JPC_SwingTwistConstraint* JPC_SwingTwistConstraintSettings_Create(
+	const JPC_SwingTwistConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2);
+
+JPC_API float JPC_SwingTwistConstraint_GetNormalHalfConeAngle(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetNormalHalfConeAngle(JPC_SwingTwistConstraint* self, float inAngle);
+JPC_API float JPC_SwingTwistConstraint_GetPlaneHalfConeAngle(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetPlaneHalfConeAngle(JPC_SwingTwistConstraint* self, float inAngle);
+JPC_API float JPC_SwingTwistConstraint_GetTwistMinAngle(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetTwistMinAngle(JPC_SwingTwistConstraint* self, float inAngle);
+JPC_API float JPC_SwingTwistConstraint_GetTwistMaxAngle(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetTwistMaxAngle(JPC_SwingTwistConstraint* self, float inAngle);
+JPC_API float JPC_SwingTwistConstraint_GetMaxFrictionTorque(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetMaxFrictionTorque(JPC_SwingTwistConstraint* self, float inFrictionTorque);
+
+JPC_API JPC_MotorState JPC_SwingTwistConstraint_GetSwingMotorState(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetSwingMotorState(JPC_SwingTwistConstraint* self, JPC_MotorState inState);
+JPC_API JPC_MotorState JPC_SwingTwistConstraint_GetTwistMotorState(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetTwistMotorState(JPC_SwingTwistConstraint* self, JPC_MotorState inState);
+
+JPC_API JPC_Vec3 JPC_SwingTwistConstraint_GetTargetAngularVelocityCS(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetTargetAngularVelocityCS(JPC_SwingTwistConstraint* self, JPC_Vec3 inAngularVelocity);
+JPC_API JPC_Quat JPC_SwingTwistConstraint_GetTargetOrientationCS(const JPC_SwingTwistConstraint* self);
+JPC_API void JPC_SwingTwistConstraint_SetTargetOrientationCS(JPC_SwingTwistConstraint* self, JPC_Quat inOrientation);
+JPC_API JPC_Quat JPC_SwingTwistConstraint_GetRotationInConstraintSpace(const JPC_SwingTwistConstraint* self);
+
+JPC_API JPC_Vec3 JPC_SwingTwistConstraint_GetTotalLambdaPosition(const JPC_SwingTwistConstraint* self);
+JPC_API float JPC_SwingTwistConstraint_GetTotalLambdaTwist(const JPC_SwingTwistConstraint* self);
+JPC_API float JPC_SwingTwistConstraint_GetTotalLambdaSwingY(const JPC_SwingTwistConstraint* self);
+JPC_API float JPC_SwingTwistConstraint_GetTotalLambdaSwingZ(const JPC_SwingTwistConstraint* self);
+JPC_API JPC_Vec3 JPC_SwingTwistConstraint_GetTotalLambdaMotor(const JPC_SwingTwistConstraint* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// PathConstraintPath -> RefTarget<PathConstraintPath>
+
+typedef struct JPC_PathConstraintPath JPC_PathConstraintPath;
+
+JPC_API uint32_t JPC_PathConstraintPath_GetRefCount(const JPC_PathConstraintPath* self);
+JPC_API void JPC_PathConstraintPath_AddRef(const JPC_PathConstraintPath* self);
+JPC_API void JPC_PathConstraintPath_Release(const JPC_PathConstraintPath* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// PathConstraintPathHermite -> PathConstraintPath -> RefTarget<PathConstraintPath>
+
+typedef struct JPC_PathConstraintPathHermite JPC_PathConstraintPathHermite;
+
+JPC_API JPC_PathConstraintPathHermite* JPC_PathConstraintPathHermite_new();
+JPC_API void JPC_PathConstraintPathHermite_AddPoint(
+	JPC_PathConstraintPathHermite* self,
+	JPC_Vec3 inPosition,
+	JPC_Vec3 inTangent,
+	JPC_Vec3 inNormal);
+
+////////////////////////////////////////////////////////////////////////////////
+// PathConstraint
+
+typedef struct JPC_PathConstraint JPC_PathConstraint;
+
+typedef struct JPC_PathConstraintSettings {
+	JPC_ConstraintSettings ConstraintSettings;
+
+	JPC_PathConstraintPath* Path;
+	JPC_Vec3 PathPosition;
+	JPC_Quat PathRotation;
+	float PathFraction;
+	float MaxFrictionForce;
+	JPC_MotorSettings PositionMotorSettings;
+	JPC_PathRotationConstraintType RotationConstraintType;
+} JPC_PathConstraintSettings;
+
+JPC_API void JPC_PathConstraintSettings_default(JPC_PathConstraintSettings* settings);
+JPC_API JPC_PathConstraint* JPC_PathConstraintSettings_Create(
+	const JPC_PathConstraintSettings* self,
+	JPC_Body* inBody1,
+	JPC_Body* inBody2);
+
+JPC_API void JPC_PathConstraint_SetPath(
+	JPC_PathConstraint* self,
+	JPC_PathConstraintPath* inPath,
+	float inPathFraction);
+JPC_API float JPC_PathConstraint_GetPathFraction(const JPC_PathConstraint* self);
+JPC_API void JPC_PathConstraint_SetMaxFrictionForce(JPC_PathConstraint* self, float inFrictionForce);
+JPC_API float JPC_PathConstraint_GetMaxFrictionForce(const JPC_PathConstraint* self);
+JPC_API void JPC_PathConstraint_SetPositionMotorState(JPC_PathConstraint* self, JPC_MotorState inState);
+JPC_API JPC_MotorState JPC_PathConstraint_GetPositionMotorState(const JPC_PathConstraint* self);
+JPC_API void JPC_PathConstraint_SetTargetVelocity(JPC_PathConstraint* self, float inVelocity);
+JPC_API float JPC_PathConstraint_GetTargetVelocity(const JPC_PathConstraint* self);
+JPC_API void JPC_PathConstraint_SetTargetPathFraction(JPC_PathConstraint* self, float inFraction);
+JPC_API float JPC_PathConstraint_GetTargetPathFraction(const JPC_PathConstraint* self);
+JPC_API JPC_Vec2 JPC_PathConstraint_GetTotalLambdaPosition(const JPC_PathConstraint* self);
+JPC_API float JPC_PathConstraint_GetTotalLambdaPositionLimits(const JPC_PathConstraint* self);
+JPC_API float JPC_PathConstraint_GetTotalLambdaMotor(const JPC_PathConstraint* self);
+JPC_API JPC_Vec3 JPC_PathConstraint_GetTotalLambdaRotation(const JPC_PathConstraint* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// PhysicsMaterial (opaque)
+
+typedef struct JPC_PhysicsMaterial JPC_PhysicsMaterial;
+
+JPC_API uint32_t JPC_PhysicsMaterial_GetRefCount(const JPC_PhysicsMaterial* self);
+JPC_API void JPC_PhysicsMaterial_AddRef(const JPC_PhysicsMaterial* self);
+JPC_API void JPC_PhysicsMaterial_Release(const JPC_PhysicsMaterial* self);
+JPC_API const char* JPC_PhysicsMaterial_GetDebugName(const JPC_PhysicsMaterial* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// CharacterContactSettings
+
+typedef struct JPC_CharacterContactSettings {
+	bool CanPushCharacter;
+	bool CanReceiveImpulses;
+} JPC_CharacterContactSettings;
+
+////////////////////////////////////////////////////////////////////////////////
+// CharacterContactListener vtable bridge
+
+typedef struct JPC_CharacterContactListenerFns {
+	void (*OnAdjustBodyVelocity)(
+		void* self,
+		const JPC_CharacterVirtual* inCharacter,
+		const JPC_Body* inBody2,
+		JPC_Vec3* ioLinearVelocity,
+		JPC_Vec3* ioAngularVelocity);
+
+	bool (*OnContactValidate)(
+		void* self,
+		const JPC_CharacterVirtual* inCharacter,
+		JPC_BodyID inBodyID2,
+		JPC_SubShapeID inSubShapeID2);
+
+	void (*OnContactAdded)(
+		void* self,
+		const JPC_CharacterVirtual* inCharacter,
+		JPC_BodyID inBodyID2,
+		JPC_SubShapeID inSubShapeID2,
+		JPC_RVec3 inContactPosition,
+		JPC_Vec3 inContactNormal,
+		JPC_CharacterContactSettings* ioSettings);
+
+	void (*OnContactPersisted)(
+		void* self,
+		const JPC_CharacterVirtual* inCharacter,
+		JPC_BodyID inBodyID2,
+		JPC_SubShapeID inSubShapeID2,
+		JPC_RVec3 inContactPosition,
+		JPC_Vec3 inContactNormal,
+		JPC_CharacterContactSettings* ioSettings);
+
+	void (*OnContactSolve)(
+		void* self,
+		const JPC_CharacterVirtual* inCharacter,
+		JPC_BodyID inBodyID2,
+		JPC_SubShapeID inSubShapeID2,
+		JPC_RVec3 inContactPosition,
+		JPC_Vec3 inContactNormal,
+		JPC_Vec3 inContactVelocity,
+		const JPC_PhysicsMaterial* inContactMaterial,
+		JPC_Vec3 inCharacterVelocity,
+		JPC_Vec3* outNewCharacterVelocity);
+} JPC_CharacterContactListenerFns;
+
+typedef struct JPC_CharacterContactListener JPC_CharacterContactListener;
+
+JPC_API JPC_CharacterContactListener* JPC_CharacterContactListener_new(
+	void* self,
+	JPC_CharacterContactListenerFns fns);
+
+JPC_API void JPC_CharacterContactListener_delete(JPC_CharacterContactListener* object);
+
+JPC_API void JPC_CharacterVirtual_SetListener(
+	JPC_CharacterVirtual* self,
+	JPC_CharacterContactListener* inListener);
+
+JPC_API JPC_CharacterContactListener* JPC_CharacterVirtual_GetListener(
+	const JPC_CharacterVirtual* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleEngineSettings
+
+typedef struct JPC_VehicleEngineSettings {
+	float MaxTorque;
+	float MinRPM;
+	float MaxRPM;
+	float Inertia;
+	float AngularDamping;
+} JPC_VehicleEngineSettings;
+
+JPC_API void JPC_VehicleEngineSettings_default(JPC_VehicleEngineSettings* object);
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleTransmissionSettings
+
+typedef struct JPC_VehicleTransmissionSettings {
+	JPC_VehicleTransmissionMode Mode;
+	float SwitchUpRPM;
+	float SwitchDownRPM;
+	float SwitchTime;
+	float ClutchReleaseTime;
+	float SwitchLatency;
+	float ClutchStrength;
+	float GearRatios[10];
+	uint  GearRatiosLen;
+	float ReverseGearRatios[4];
+	uint  ReverseGearRatiosLen;
+} JPC_VehicleTransmissionSettings;
+
+JPC_API void JPC_VehicleTransmissionSettings_default(JPC_VehicleTransmissionSettings* object);
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleDifferentialSettings
+
+typedef struct JPC_VehicleDifferentialSettings {
+	int   LeftWheel;
+	int   RightWheel;
+	float DifferentialRatio;
+	float LeftRightSplit;
+	float LimitedSlipRatio;
+	float EngineTorqueRatio;
+} JPC_VehicleDifferentialSettings;
+
+JPC_API void JPC_VehicleDifferentialSettings_default(JPC_VehicleDifferentialSettings* object);
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleAntiRollBar
+
+typedef struct JPC_VehicleAntiRollBar {
+	int   LeftWheel;
+	int   RightWheel;
+	float Stiffness;
+} JPC_VehicleAntiRollBar;
+
+////////////////////////////////////////////////////////////////////////////////
+// WheelSettingsWV (opaque builder)
+
+typedef struct JPC_WheelSettingsWV JPC_WheelSettingsWV;
+
+JPC_API JPC_WheelSettingsWV* JPC_WheelSettingsWV_new();
+JPC_API void JPC_WheelSettingsWV_delete(JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetPosition(JPC_WheelSettingsWV* self, JPC_Vec3 inPosition);
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetPosition(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetSuspensionDirection(JPC_WheelSettingsWV* self, JPC_Vec3 inDirection);
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetSuspensionDirection(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetSteeringAxis(JPC_WheelSettingsWV* self, JPC_Vec3 inAxis);
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetSteeringAxis(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetWheelUp(JPC_WheelSettingsWV* self, JPC_Vec3 inUp);
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetWheelUp(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetWheelForward(JPC_WheelSettingsWV* self, JPC_Vec3 inForward);
+JPC_API JPC_Vec3 JPC_WheelSettingsWV_GetWheelForward(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetSuspensionMinLength(JPC_WheelSettingsWV* self, float inLength);
+JPC_API float JPC_WheelSettingsWV_GetSuspensionMinLength(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetSuspensionMaxLength(JPC_WheelSettingsWV* self, float inLength);
+JPC_API float JPC_WheelSettingsWV_GetSuspensionMaxLength(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetSuspensionPreloadLength(JPC_WheelSettingsWV* self, float inLength);
+JPC_API float JPC_WheelSettingsWV_GetSuspensionPreloadLength(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetRadius(JPC_WheelSettingsWV* self, float inRadius);
+JPC_API float JPC_WheelSettingsWV_GetRadius(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetWidth(JPC_WheelSettingsWV* self, float inWidth);
+JPC_API float JPC_WheelSettingsWV_GetWidth(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetMaxSteerAngle(JPC_WheelSettingsWV* self, float inAngle);
+JPC_API float JPC_WheelSettingsWV_GetMaxSteerAngle(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetMaxBrakeTorque(JPC_WheelSettingsWV* self, float inTorque);
+JPC_API float JPC_WheelSettingsWV_GetMaxBrakeTorque(const JPC_WheelSettingsWV* self);
+
+JPC_API void JPC_WheelSettingsWV_SetMaxHandBrakeTorque(JPC_WheelSettingsWV* self, float inTorque);
+JPC_API float JPC_WheelSettingsWV_GetMaxHandBrakeTorque(const JPC_WheelSettingsWV* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// WheeledVehicleControllerSettings (opaque builder)
+
+typedef struct JPC_WheeledVehicleControllerSettings JPC_WheeledVehicleControllerSettings;
+
+JPC_API JPC_WheeledVehicleControllerSettings* JPC_WheeledVehicleControllerSettings_new();
+JPC_API void JPC_WheeledVehicleControllerSettings_delete(JPC_WheeledVehicleControllerSettings* self);
+
+JPC_API void JPC_WheeledVehicleControllerSettings_SetEngine(
+	JPC_WheeledVehicleControllerSettings* self,
+	const JPC_VehicleEngineSettings* inEngine);
+
+JPC_API void JPC_WheeledVehicleControllerSettings_SetTransmission(
+	JPC_WheeledVehicleControllerSettings* self,
+	const JPC_VehicleTransmissionSettings* inTransmission);
+
+JPC_API void JPC_WheeledVehicleControllerSettings_AddDifferential(
+	JPC_WheeledVehicleControllerSettings* self,
+	const JPC_VehicleDifferentialSettings* inDifferential);
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleConstraintSettings (opaque builder)
+
+typedef struct JPC_VehicleConstraintSettings JPC_VehicleConstraintSettings;
+
+JPC_API JPC_VehicleConstraintSettings* JPC_VehicleConstraintSettings_new();
+JPC_API void JPC_VehicleConstraintSettings_delete(JPC_VehicleConstraintSettings* self);
+
+JPC_API void JPC_VehicleConstraintSettings_SetUp(JPC_VehicleConstraintSettings* self, JPC_Vec3 inUp);
+JPC_API void JPC_VehicleConstraintSettings_SetForward(JPC_VehicleConstraintSettings* self, JPC_Vec3 inForward);
+JPC_API void JPC_VehicleConstraintSettings_SetMaxPitchRollAngle(JPC_VehicleConstraintSettings* self, float inAngle);
+JPC_API void JPC_VehicleConstraintSettings_AddWheel(JPC_VehicleConstraintSettings* self, const JPC_WheelSettingsWV* inWheel);
+JPC_API void JPC_VehicleConstraintSettings_AddAntiRollBar(JPC_VehicleConstraintSettings* self, JPC_VehicleAntiRollBar inBar);
+JPC_API void JPC_VehicleConstraintSettings_SetController(JPC_VehicleConstraintSettings* self, const JPC_WheeledVehicleControllerSettings* inController);
+typedef struct JPC_VehicleConstraint JPC_VehicleConstraint;
+
+JPC_API JPC_VehicleConstraint* JPC_VehicleConstraintSettings_Create(const JPC_VehicleConstraintSettings* self, JPC_Body* inVehicleBody);
+JPC_API JPC_Constraint* JPC_VehicleConstraint_AsConstraint(JPC_VehicleConstraint* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleConstraint runtime
+
+typedef struct JPC_WheeledVehicleController JPC_WheeledVehicleController;
+
+JPC_API JPC_WheeledVehicleController* JPC_VehicleConstraint_GetWheeledController(JPC_VehicleConstraint* self);
+JPC_API void JPC_WheeledVehicleController_SetDriverInput(JPC_WheeledVehicleController* self, float inForward, float inRight, float inBrake, float inHandBrake);
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleCollisionTester
+
+typedef struct JPC_VehicleCollisionTester JPC_VehicleCollisionTester;
+
+JPC_API JPC_VehicleCollisionTester* JPC_VehicleCollisionTesterRay_new(JPC_ObjectLayer inObjectLayer, JPC_Vec3 inUp, float inMaxSlopeAngle);
+JPC_API JPC_VehicleCollisionTester* JPC_VehicleCollisionTesterCastSphere_new(JPC_ObjectLayer inObjectLayer, float inRadius, JPC_Vec3 inUp, float inMaxSlopeAngle);
+JPC_API JPC_VehicleCollisionTester* JPC_VehicleCollisionTesterCastCylinder_new(JPC_ObjectLayer inObjectLayer, float inConvexRadiusFraction);
+JPC_API void JPC_VehicleCollisionTester_delete(JPC_VehicleCollisionTester* self);
+JPC_API void JPC_VehicleConstraint_SetVehicleCollisionTester(JPC_VehicleConstraint* self, JPC_VehicleCollisionTester* inTester);
+
+////////////////////////////////////////////////////////////////////////////////
+// PhysicsSystem step listener support
+
+JPC_API void JPC_PhysicsSystem_AddStepListener(JPC_PhysicsSystem* self, JPC_VehicleConstraint* inConstraint);
+JPC_API void JPC_PhysicsSystem_RemoveStepListener(JPC_PhysicsSystem* self, JPC_VehicleConstraint* inConstraint);
+
+////////////////////////////////////////////////////////////////////////////////
+// SoftBodySharedSettings -> RefTarget<SoftBodySharedSettings>
+
+typedef struct JPC_SoftBodySharedSettings JPC_SoftBodySharedSettings;
+
+JPC_API JPC_SoftBodySharedSettings* JPC_SoftBodySharedSettings_new();
+JPC_API uint32_t JPC_SoftBodySharedSettings_GetRefCount(const JPC_SoftBodySharedSettings* self);
+JPC_API void JPC_SoftBodySharedSettings_AddRef(const JPC_SoftBodySharedSettings* self);
+JPC_API void JPC_SoftBodySharedSettings_Release(const JPC_SoftBodySharedSettings* self);
+
+typedef struct JPC_SoftBodyVertex {
+	JPC_Float3 Position;
+	JPC_Float3 Velocity;
+	float InvMass;
+} JPC_SoftBodyVertex;
+
+JPC_API void JPC_SoftBodySharedSettings_AddVertex(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyVertex* inVertex);
+
+typedef struct JPC_SoftBodyEdgeConstraint {
+	uint32_t Vertex0;
+	uint32_t Vertex1;
+	float Compliance;
+} JPC_SoftBodyEdgeConstraint;
+
+JPC_API void JPC_SoftBodySharedSettings_AddEdgeConstraint(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyEdgeConstraint* inEdge);
+
+typedef struct JPC_SoftBodyFace {
+	uint32_t Vertex[3];
+} JPC_SoftBodyFace;
+
+JPC_API void JPC_SoftBodySharedSettings_AddFace(JPC_SoftBodySharedSettings* self, const JPC_SoftBodyFace* inFace);
+JPC_API void JPC_SoftBodySharedSettings_Optimize(JPC_SoftBodySharedSettings* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// SoftBodyCreationSettings
+
+typedef struct JPC_SoftBodyCreationSettings {
+	const JPC_SoftBodySharedSettings* Settings;
+	JPC_RVec3 Position;
+	JPC_Quat Rotation;
+	uint64_t UserData;
+	JPC_ObjectLayer ObjectLayer;
+	uint32_t NumIterations;
+	float LinearDamping;
+	float MaxLinearVelocity;
+	float Restitution;
+	float Friction;
+	float Pressure;
+	float GravityFactor;
+	float VertexRadius;
+	bool UpdatePosition;
+	bool MakeRotationIdentity;
+	bool AllowSleeping;
+	bool FacesDoubleSided;
+} JPC_SoftBodyCreationSettings;
+
+JPC_API void JPC_SoftBodyCreationSettings_default(JPC_SoftBodyCreationSettings* object);
+
+////////////////////////////////////////////////////////////////////////////////
+// BodyInterface soft body create/add methods
+
+JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBody(JPC_BodyInterface* self, const JPC_SoftBodyCreationSettings* inSettings);
+JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithID(JPC_BodyInterface* self, JPC_BodyID inBodyID, const JPC_SoftBodyCreationSettings* inSettings);
+JPC_API JPC_BodyID JPC_BodyInterface_CreateAndAddSoftBody(JPC_BodyInterface* self, const JPC_SoftBodyCreationSettings* inSettings, JPC_Activation inActivationMode);
+
+////////////////////////////////////////////////////////////////////////////////
+// StateRecorder (wraps StateRecorderImpl)
+
+typedef struct JPC_StateRecorder JPC_StateRecorder;
+
+JPC_API JPC_StateRecorder* JPC_StateRecorder_new();
+JPC_API void JPC_StateRecorder_delete(JPC_StateRecorder* self);
+JPC_API void JPC_StateRecorder_Clear(JPC_StateRecorder* self);
+JPC_API void JPC_StateRecorder_Rewind(JPC_StateRecorder* self);
+JPC_API void JPC_StateRecorder_GetData(const JPC_StateRecorder* self, const uint8_t** outData, size_t* outLen);
+JPC_API size_t JPC_StateRecorder_GetDataSize(const JPC_StateRecorder* self);
+
+////////////////////////////////////////////////////////////////////////////////
+// PhysicsSystem save/restore state
+
+JPC_API void JPC_PhysicsSystem_SaveState(JPC_PhysicsSystem* self, JPC_StateRecorder* inStateRecorder);
+JPC_API bool JPC_PhysicsSystem_RestoreState(JPC_PhysicsSystem* self, JPC_StateRecorder* inStateRecorder);
+
+////////////////////////////////////////////////////////////////////////////////
+// RagdollSettings -> RefTarget<RagdollSettings>
+
+typedef struct JPC_Ragdoll JPC_Ragdoll;
+typedef struct JPC_RagdollSettings JPC_RagdollSettings;
+
+JPC_API JPC_RagdollSettings* JPC_RagdollSettings_new();
+JPC_API void JPC_RagdollSettings_delete(JPC_RagdollSettings* self);
+
+JPC_API uint32_t JPC_RagdollSettings_GetRefCount(const JPC_RagdollSettings* self);
+JPC_API void JPC_RagdollSettings_AddRef(const JPC_RagdollSettings* self);
+JPC_API void JPC_RagdollSettings_Release(const JPC_RagdollSettings* self);
+
+JPC_API uint JPC_RagdollSettings_GetPartCount(const JPC_RagdollSettings* self);
+JPC_API void JPC_RagdollSettings_AddPart(JPC_RagdollSettings* self, const JPC_BodyCreationSettings* inBodyCreationSettings);
+JPC_API JPC_Ragdoll* JPC_RagdollSettings_CreateRagdoll(
+	const JPC_RagdollSettings* self,
+	JPC_GroupID inCollisionGroup,
+	uint64_t inUserData,
+	JPC_PhysicsSystem* inPhysicsSystem);
+
+////////////////////////////////////////////////////////////////////////////////
+// Ragdoll runtime
+
+JPC_API void JPC_Ragdoll_delete(JPC_Ragdoll* self);
+JPC_API void JPC_Ragdoll_AddToPhysicsSystem(JPC_Ragdoll* self, JPC_Activation inActivationMode, bool inLockBodies);
+JPC_API void JPC_Ragdoll_RemoveFromPhysicsSystem(JPC_Ragdoll* self, bool inLockBodies);
+JPC_API void JPC_Ragdoll_Activate(JPC_Ragdoll* self, bool inLockBodies);
+JPC_API uint JPC_Ragdoll_GetBodyCount(const JPC_Ragdoll* self);
+JPC_API JPC_BodyID JPC_Ragdoll_GetBodyID(const JPC_Ragdoll* self, uint inBodyIndex);
+
 #ifdef __cplusplus
 }
 #endif
