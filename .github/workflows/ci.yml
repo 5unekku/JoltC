@@ -36,17 +36,11 @@ jobs:
         ninja: true
 
     - name: Configure CMake
-      run: cmake -B build ${{ matrix.build_flags }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -GNinja
+      run: cmake -B build ${{ matrix.build_flags }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -GNinja -DINTERPROCEDURAL_OPTIMIZATION=OFF
 
     - name: Build
-      run: cmake --build build --config=${{ matrix.build_type }}
-
-    - name: Run Hello World
-      shell: bash
-      run: ./build/${{ matrix.build_type }}/HelloWorld
-      if: ${{ contains(matrix.os, 'windows') }}
+      run: cmake --build build
 
     - name: Run Hello World
       shell: bash
       run: ./build/HelloWorld
-      if: ${{ !contains(matrix.os, 'windows') }}
