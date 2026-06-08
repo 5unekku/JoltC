@@ -3083,6 +3083,32 @@ JPC_API void JPC_PhysicsSystem_OptimizeBroadPhase(JPC_PhysicsSystem* self) {
 	to_jph(self)->OptimizeBroadPhase();
 }
 
+JPC_API uint32_t JPC_PhysicsSystem_GetNumBodies(const JPC_PhysicsSystem* self) {
+	return to_jph(self)->GetNumBodies();
+}
+
+JPC_API uint32_t JPC_PhysicsSystem_GetNumActiveBodies(const JPC_PhysicsSystem* self, JPC_BodyType inType) {
+	return to_jph(self)->GetNumActiveBodies(static_cast<JPH::EBodyType>(inType));
+}
+
+JPC_API void JPC_PhysicsSystem_GetBodies(const JPC_PhysicsSystem* self, JPC_BodyID* outBodyIDs, uint32_t* outCount) {
+	JPH::BodyIDVector ids;
+	to_jph(self)->GetBodies(ids);
+	uint32_t n = static_cast<uint32_t>(ids.size());
+	if (outBodyIDs)
+		memcpy(outBodyIDs, ids.data(), n * sizeof(JPC_BodyID));
+	*outCount = n;
+}
+
+JPC_API void JPC_PhysicsSystem_GetActiveBodies(const JPC_PhysicsSystem* self, JPC_BodyType inType, JPC_BodyID* outBodyIDs, uint32_t* outCount) {
+	JPH::BodyIDVector ids;
+	to_jph(self)->GetActiveBodies(static_cast<JPH::EBodyType>(inType), ids);
+	uint32_t n = static_cast<uint32_t>(ids.size());
+	if (outBodyIDs)
+		memcpy(outBodyIDs, ids.data(), n * sizeof(JPC_BodyID));
+	*outCount = n;
+}
+
 JPC_API void JPC_PhysicsSystem_AddConstraint(JPC_PhysicsSystem* self, JPC_Constraint* constraint) {
 	to_jph(self)->AddConstraint(to_jph(constraint));
 }

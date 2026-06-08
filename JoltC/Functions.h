@@ -1702,6 +1702,11 @@ JPC_API void JPC_PhysicsSystem_DrawConstraints(
 	JPC_PhysicsSystem* self,
 	JPC_DebugRendererSimple* inRenderer); // FIXME: un-specialize
 
+JPC_API uint32_t JPC_PhysicsSystem_GetNumBodies(const JPC_PhysicsSystem* self);
+JPC_API uint32_t JPC_PhysicsSystem_GetNumActiveBodies(const JPC_PhysicsSystem* self, JPC_BodyType inType);
+JPC_API void JPC_PhysicsSystem_GetBodies(const JPC_PhysicsSystem* self, JPC_BodyID* outBodyIDs, uint32_t* outCount);
+JPC_API void JPC_PhysicsSystem_GetActiveBodies(const JPC_PhysicsSystem* self, JPC_BodyType inType, JPC_BodyID* outBodyIDs, uint32_t* outCount);
+
 JPC_API void JPC_PhysicsSystem_SetSimShapeFilter(JPC_PhysicsSystem* self, const JPC_SimShapeFilter* inShapeFilter);
 
 JPC_API void JPC_PhysicsSystem_SetContactListener(JPC_PhysicsSystem* self, JPC_ContactListener* inContactListener);
