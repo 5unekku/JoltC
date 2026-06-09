@@ -80,11 +80,11 @@
 #define JPC_IMPL static
 
 #define OPAQUE_WRAPPER(c_type, cpp_type) \
-	static c_type* to_jpc(cpp_type *in) { return reinterpret_cast<c_type*>(in); } \
-	static const c_type* to_jpc(const cpp_type *in) { return reinterpret_cast<const c_type*>(in); } \
-	static cpp_type* to_jph(c_type *in) { return reinterpret_cast<cpp_type*>(in); } \
-	static const cpp_type* to_jph(const c_type *in) { return reinterpret_cast<const cpp_type*>(in); } \
-	static cpp_type** to_jph(c_type **in) { return reinterpret_cast<cpp_type**>(in); }
+	[[maybe_unused]] static c_type* to_jpc(cpp_type *in) { return reinterpret_cast<c_type*>(in); } \
+	[[maybe_unused]] static const c_type* to_jpc(const cpp_type *in) { return reinterpret_cast<const c_type*>(in); } \
+	[[maybe_unused]] static cpp_type* to_jph(c_type *in) { return reinterpret_cast<cpp_type*>(in); } \
+	[[maybe_unused]] static const cpp_type* to_jph(const c_type *in) { return reinterpret_cast<const cpp_type*>(in); } \
+	[[maybe_unused]] static cpp_type** to_jph(c_type **in) { return reinterpret_cast<cpp_type**>(in); }
 
 #define DESTRUCTOR(c_type) \
 	JPC_API void c_type##_delete(c_type* object) { \
@@ -92,30 +92,30 @@
 	}
 
 #define ENUM_CONVERSION(c_type, cpp_type) \
-	static c_type to_jpc(cpp_type in) { return static_cast<c_type>(in); } \
-	static cpp_type to_jph(c_type in) { return static_cast<cpp_type>(in); }
+	[[maybe_unused]] static c_type to_jpc(cpp_type in) { return static_cast<c_type>(in); } \
+	[[maybe_unused]] static cpp_type to_jph(c_type in) { return static_cast<cpp_type>(in); }
 
 #define LAYOUT_COMPATIBLE(c_type, cpp_type) \
-	static c_type to_jpc(cpp_type in) { \
+	[[maybe_unused]] static c_type to_jpc(cpp_type in) { \
 		c_type out; \
 		memcpy(&out, &in, sizeof(c_type)); \
 		return out; \
 	} \
-	static cpp_type to_jph(c_type in) { \
+	[[maybe_unused]] static cpp_type to_jph(c_type in) { \
 		cpp_type out; \
 		memcpy(&out, &in, sizeof(cpp_type)); \
 		return out; \
 	} \
-	static c_type* to_jpc(cpp_type* in) { \
+	[[maybe_unused]] static c_type* to_jpc(cpp_type* in) { \
 		return reinterpret_cast<c_type*>(in); \
 	} \
-	static cpp_type* to_jph(c_type* in) { \
+	[[maybe_unused]] static cpp_type* to_jph(c_type* in) { \
 		return reinterpret_cast<cpp_type*>(in); \
 	} \
-	static const c_type* to_jpc(const cpp_type* in) { \
+	[[maybe_unused]] static const c_type* to_jpc(const cpp_type* in) { \
 		return reinterpret_cast<const c_type*>(in); \
 	} \
-	static const cpp_type* to_jph(const c_type* in) { \
+	[[maybe_unused]] static const cpp_type* to_jph(const c_type* in) { \
 		return reinterpret_cast<const cpp_type*>(in); \
 	} \
 	static_assert(sizeof(c_type) == sizeof(cpp_type), "size of " #c_type " did not match size of " #cpp_type); \
@@ -299,7 +299,7 @@ static JPC_SubShapeID to_jpc(JPH::SubShapeID in) {
 }
 
 static JPC_RayCastResult to_jpc(JPH::RayCastResult in) {
-	JPC_RayCastResult out{0};
+	JPC_RayCastResult out{};
 	out.BodyID = to_jpc(in.mBodyID);
 	out.Fraction = in.mFraction;
 	out.SubShapeID2 = to_jpc(in.mSubShapeID2);
@@ -467,7 +467,7 @@ JPC_IMPL JPH::CollisionGroup JPC_CollisionGroup_to_jph(const JPC_CollisionGroup*
 
 JPC_IMPL JPC_CollisionGroup JPC_CollisionGroup_to_jpc(const JPH::CollisionGroup* input) {
 	JPC_CollisionGroup group{};
-	group.GroupFilter; // NOTE: This member doesn't matter for callers of this function
+	(void)group.GroupFilter; // this member doesn't matter for callers of this function
 	group.GroupID = input->GetGroupID();
 	group.SubGroupID = input->GetSubGroupID();
 	return group;
@@ -1765,9 +1765,9 @@ JPC_API void JPC_TriangleShapeSettings_default(JPC_TriangleShapeSettings* object
 	object->Material = nullptr;
 	object->Density = 1000.0;
 
-	object->V1 = {0};
-	object->V2 = {0};
-	object->V3 = {0};
+	object->V1 = {};
+	object->V2 = {};
+	object->V3 = {};
 	object->ConvexRadius = 0.0;
 }
 
@@ -1846,7 +1846,7 @@ JPC_API void JPC_BoxShapeSettings_default(JPC_BoxShapeSettings* object) {
 	object->Material = nullptr;
 	object->Density = 1000.0;
 
-	object->HalfExtent = JPC_Vec3{0};
+	object->HalfExtent = JPC_Vec3{};
 	object->ConvexRadius = 0.0;
 }
 
@@ -2027,7 +2027,7 @@ static JPH::Array<JPH::CompoundShapeSettings::SubShapeSettings> to_jph(const JPC
 
 JPC_API void JPC_SubShapeSettings_default(JPC_SubShapeSettings* object) {
 	object->Shape = nullptr;
-	object->Position = JPC_Vec3{0};
+	object->Position = JPC_Vec3{};
 	object->Rotation = JPC_Quat{0, 0, 0, 1};
 	object->UserData = 0;
 }

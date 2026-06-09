@@ -24,19 +24,20 @@ jobs:
     name: Tests - ${{ matrix.os }} ${{ matrix.build_type }} ${{ matrix.build_flags }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
-    - name: Setup C++ Tooling
-      uses: aminya/setup-cpp@v1
-      with:
-        compiler: ${{ contains(matrix.os, 'windows') && 'msvc' || 'clang' }}
-        cmake: true
-        ninja: true
+    - name: Install Clang (Linux)
+      if: runner.os == 'Linux'
+      run: sudo apt-get install -y clang
+
+    - name: Setup MSVC (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
 
     - name: Configure CMake
-      run: cmake -B build ${{ matrix.build_flags }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -GNinja -DINTERPROCEDURAL_OPTIMIZATION=OFF
+      run: cmake -B build ${{ matrix.build_flags }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -GNinja -DINTERPROCEDURAL_OPTIMIZATION=OFF ${{ runner.os == 'Linux' && '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++' || '' }}
 
     - name: Build
       run: cmake --build build

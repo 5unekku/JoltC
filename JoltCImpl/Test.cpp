@@ -81,8 +81,22 @@ constexpr auto to_integral(E e) -> typename std::underlying_type<E>::type
 #define ENSURE_NORMAL_FIELD(basetype, basefield) \
 	ENSURE_FIELD(JPC_ ## basetype, basefield, JPH::basetype, m ## basefield);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wkeyword-macro"
+#endif
 #define const constexpr // 🫡
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 #include "JoltC/Enums.h"
 #undef const
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
 #include "JoltC/Functions.h"
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
