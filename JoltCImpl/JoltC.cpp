@@ -165,7 +165,9 @@ DESTRUCTOR(JPC_JobSystemSingleThreaded)
 
 OPAQUE_WRAPPER(JPC_Shape, JPH::Shape)
 OPAQUE_WRAPPER(JPC_CompoundShape, JPH::CompoundShape)
+OPAQUE_WRAPPER(JPC_MutableCompoundShape, JPH::MutableCompoundShape)
 OPAQUE_WRAPPER(JPC_Body, JPH::Body)
+OPAQUE_WRAPPER(JPC_PhysicsMaterial, JPH::PhysicsMaterial)
 
 OPAQUE_WRAPPER(JPC_VertexList, JPH::VertexList)
 DESTRUCTOR(JPC_VertexList)
@@ -494,8 +496,10 @@ public:
 	}
 
 #if defined(JPH_EXTERNAL_PROFILE) || defined(JPH_PROFILE_ENABLED)
-	virtual const char * GetBroadPhaseLayerName([[maybe_unused]] JPH::BroadPhaseLayer inLayer) const override {
-		return "FIXME";
+	virtual const char * GetBroadPhaseLayerName(JPH::BroadPhaseLayer inLayer) const override {
+		if (fns.GetBroadPhaseLayerName)
+			return fns.GetBroadPhaseLayerName(self, to_jpc(inLayer));
+		return "";
 	}
 #endif
 
@@ -1117,9 +1121,6 @@ JPC_API float JPC_SixDOFConstraint_GetLimitsMax(const JPC_SixDOFConstraint* self
 
 JPC_API bool JPC_SixDOFConstraint_IsFreeAxis(const JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis);
 
-// const SpringSettings & GetLimitsSpringSettings(JPC_SixDOFConstraint_Axis inAxis) const { JPH_ASSERT(inAxis < JPC_SixDOFConstraint_Axis::NumTranslation); return mLimitsSpringSettings[inAxis]; }
-// void SetLimitsSpringSettings(JPC_SixDOFConstraint_Axis inAxis, const SpringSettings& inLimitsSpringSettings) { JPH_ASSERT(inAxis < JPC_SixDOFConstraint_Axis::NumTranslation); mLimitsSpringSettings[inAxis] = inLimitsSpringSettings; CacheHasSpringLimits(); }
-
 JPC_API void JPC_SixDOFConstraint_SetMaxFriction(JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis, float inFriction) {
 	to_jph(self)->SetMaxFriction((JPH::SixDOFConstraint::EAxis)inAxis, inFriction);
 }
@@ -1131,13 +1132,6 @@ JPC_API float JPC_SixDOFConstraint_GetMaxFriction(const JPC_SixDOFConstraint* se
 JPC_API JPC_Quat JPC_SixDOFConstraint_GetRotationInConstraintSpace(const JPC_SixDOFConstraint* self) {
 	return to_jpc(to_jph(self)->GetRotationInConstraintSpace());
 }
-
-/// Motor settings
-// MotorSettings & GetMotorSettings(EAxis inAxis)
-// const MotorSettings & GetMotorSettings(EAxis inAxis) const
-
-// void SetMotorState(EAxis inAxis, EMotorState inState);
-// EMotorState GetMotorState(EAxis inAxis) const
 
 JPC_API JPC_Vec3 JPC_SixDOFConstraint_GetTargetVelocityCS(const JPC_SixDOFConstraint* self) {
 	return to_jpc(to_jph(self)->GetTargetVelocityCS());
@@ -1452,8 +1446,8 @@ JPC_IMPL void JPC_SixDOFConstraintSettings_to_jpc(
 	std::copy(inJph->mMaxFriction, inJph->mMaxFriction + 6, outJpc->MaxFriction);
 	std::copy(inJph->mLimitMin, inJph->mLimitMin + 6, outJpc->LimitMin);
 	std::copy(inJph->mLimitMax, inJph->mLimitMax + 6, outJpc->LimitMax);
-
-	// TODO: LimitsSpringSettings
+	for (int i = 0; i < 3; i++)
+		JPC_SpringSettings_to_jpc(&outJpc->LimitsSpringSettings[i], &inJph->mLimitsSpringSettings[i]);
 }
 
 JPC_IMPL void JPC_SixDOFConstraintSettings_to_jph(
@@ -1472,8 +1466,8 @@ JPC_IMPL void JPC_SixDOFConstraintSettings_to_jph(
 	std::copy(inJpc->MaxFriction, inJpc->MaxFriction + 6, outJph->mMaxFriction);
 	std::copy(inJpc->LimitMin, inJpc->LimitMin + 6, outJph->mLimitMin);
 	std::copy(inJpc->LimitMax, inJpc->LimitMax + 6, outJph->mLimitMax);
-
-	// TODO: LimitsSpringSettings
+	for (int i = 0; i < 3; i++)
+		JPC_SpringSettings_to_jph(&inJpc->LimitsSpringSettings[i], &outJph->mLimitsSpringSettings[i]);
 }
 
 JPC_API void JPC_SixDOFConstraintSettings_default(JPC_SixDOFConstraintSettings* settings) {
@@ -1567,7 +1561,7 @@ JPC_IMPL void JPC_DistanceConstraintSettings_to_jpc(
 	outJpc->Point2 = to_jpc(inJph->mPoint2);
 	outJpc->MinDistance = inJph->mMinDistance;
 	outJpc->MaxDistance = inJph->mMaxDistance;
-	// TODO: Spring settings
+	JPC_SpringSettings_to_jpc(&outJpc->LimitsSpringSettings, &inJph->mLimitsSpringSettings);
 }
 
 JPC_IMPL void JPC_DistanceConstraintSettings_to_jph(
@@ -1581,7 +1575,7 @@ JPC_IMPL void JPC_DistanceConstraintSettings_to_jph(
 	outJph->mPoint2 = to_jph(inJpc->Point2);
 	outJph->mMinDistance = inJpc->MinDistance;
 	outJph->mMaxDistance = inJpc->MaxDistance;
-	// TODO: Spring settings
+	JPC_SpringSettings_to_jph(&inJpc->LimitsSpringSettings, &outJph->mLimitsSpringSettings);
 }
 
 JPC_API void JPC_DistanceConstraintSettings_default(JPC_DistanceConstraintSettings* settings) {
@@ -1755,8 +1749,7 @@ static bool HandleShapeResult(JPH::ShapeSettings::ShapeResult res, JPC_Shape** o
 
 static void to_jph(const JPC_TriangleShapeSettings* input, JPH::TriangleShapeSettings* output) {
 	output->mUserData = input->UserData;
-
-	// TODO: Material
+	output->mMaterial = const_cast<JPH::PhysicsMaterial*>(to_jph(input->Material));
 	output->mDensity = input->Density;
 
 	output->mV1 = to_jph(input->V1);
@@ -1767,8 +1760,7 @@ static void to_jph(const JPC_TriangleShapeSettings* input, JPH::TriangleShapeSet
 
 JPC_API void JPC_TriangleShapeSettings_default(JPC_TriangleShapeSettings* object) {
 	object->UserData = 0;
-
-	// TODO: Material
+	object->Material = nullptr;
 	object->Density = 1000.0;
 
 	object->V1 = {0};
@@ -1840,8 +1832,7 @@ JPC_API bool JPC_MeshShapeSettings_Create(const JPC_MeshShapeSettings* self, JPC
 
 static void to_jph(const JPC_BoxShapeSettings* input, JPH::BoxShapeSettings* output) {
 	output->mUserData = input->UserData;
-
-	// TODO: Material
+	output->mMaterial = const_cast<JPH::PhysicsMaterial*>(to_jph(input->Material));
 	output->mDensity = input->Density;
 
 	output->mHalfExtent = to_jph(input->HalfExtent);
@@ -1850,8 +1841,7 @@ static void to_jph(const JPC_BoxShapeSettings* input, JPH::BoxShapeSettings* out
 
 JPC_API void JPC_BoxShapeSettings_default(JPC_BoxShapeSettings* object) {
 	object->UserData = 0;
-
-	// TODO: Material
+	object->Material = nullptr;
 	object->Density = 1000.0;
 
 	object->HalfExtent = JPC_Vec3{0};
@@ -1870,8 +1860,7 @@ JPC_API bool JPC_BoxShapeSettings_Create(const JPC_BoxShapeSettings* self, JPC_S
 
 static void to_jph(const JPC_SphereShapeSettings* input, JPH::SphereShapeSettings* output) {
 	output->mUserData = input->UserData;
-
-	// TODO: Material
+	output->mMaterial = const_cast<JPH::PhysicsMaterial*>(to_jph(input->Material));
 	output->mDensity = input->Density;
 
 	output->mRadius = input->Radius;
@@ -1879,8 +1868,7 @@ static void to_jph(const JPC_SphereShapeSettings* input, JPH::SphereShapeSetting
 
 JPC_API void JPC_SphereShapeSettings_default(JPC_SphereShapeSettings* object) {
 	object->UserData = 0;
-
-	// TODO: Material
+	object->Material = nullptr;
 	object->Density = 1000.0;
 
 	object->Radius = 0.0;
@@ -1898,8 +1886,7 @@ JPC_API bool JPC_SphereShapeSettings_Create(const JPC_SphereShapeSettings* self,
 
 static void to_jph(const JPC_CapsuleShapeSettings* input, JPH::CapsuleShapeSettings* output) {
 	output->mUserData = input->UserData;
-
-	// TODO: Material
+	output->mMaterial = const_cast<JPH::PhysicsMaterial*>(to_jph(input->Material));
 	output->mDensity = input->Density;
 
 	output->mRadius = input->Radius;
@@ -1908,8 +1895,7 @@ static void to_jph(const JPC_CapsuleShapeSettings* input, JPH::CapsuleShapeSetti
 
 JPC_API void JPC_CapsuleShapeSettings_default(JPC_CapsuleShapeSettings* object) {
 	object->UserData = 0;
-
-	// TODO: Material
+	object->Material = nullptr;
 	object->Density = 1000.0;
 
 	object->Radius = 0.0;
@@ -1928,8 +1914,7 @@ JPC_API bool JPC_CapsuleShapeSettings_Create(const JPC_CapsuleShapeSettings* sel
 
 static void to_jph(const JPC_CylinderShapeSettings* input, JPH::CylinderShapeSettings* output) {
 	output->mUserData = input->UserData;
-
-	// TODO: Material
+	output->mMaterial = const_cast<JPH::PhysicsMaterial*>(to_jph(input->Material));
 	output->mDensity = input->Density;
 
 	output->mHalfHeight = input->HalfHeight;
@@ -1939,8 +1924,7 @@ static void to_jph(const JPC_CylinderShapeSettings* input, JPH::CylinderShapeSet
 
 JPC_API void JPC_CylinderShapeSettings_default(JPC_CylinderShapeSettings* object) {
 	object->UserData = 0;
-
-	// TODO: Material
+	object->Material = nullptr;
 	object->Density = 1000.0;
 
 	object->HalfHeight = 0.0;
@@ -1960,16 +1944,14 @@ JPC_API bool JPC_CylinderShapeSettings_Create(const JPC_CylinderShapeSettings* s
 
 static void to_jph(const JPC_PlaneShapeSettings* input, JPH::PlaneShapeSettings* output) {
 	output->mUserData = input->UserData;
-
-	// TODO: Material
+	output->mMaterial = const_cast<JPH::PhysicsMaterial*>(to_jph(input->Material));
 	output->mPlane = JPH::Plane(to_jph(input->Normal), input->Constant);
 	output->mHalfExtent = input->HalfExtent;
 }
 
 JPC_API void JPC_PlaneShapeSettings_default(JPC_PlaneShapeSettings* object) {
 	object->UserData = 0;
-
-	// TODO: Material
+	object->Material = nullptr;
 	object->Normal = JPC_Vec3{0, 1, 0, 1};
 	object->Constant = 0.0;
 	object->HalfExtent = JPH::PlaneShapeSettings::cDefaultHalfExtent;
@@ -1987,8 +1969,7 @@ JPC_API bool JPC_PlaneShapeSettings_Create(const JPC_PlaneShapeSettings* self, J
 
 static void to_jph(const JPC_ConvexHullShapeSettings* input, JPH::ConvexHullShapeSettings* output) {
 	output->mUserData = input->UserData;
-
-	// TODO: Material
+	output->mMaterial = const_cast<JPH::PhysicsMaterial*>(to_jph(input->Material));
 	output->mDensity = input->Density;
 
 	output->mPoints = to_jph(input->Points, input->PointsLen);
@@ -1999,8 +1980,7 @@ static void to_jph(const JPC_ConvexHullShapeSettings* input, JPH::ConvexHullShap
 
 JPC_API void JPC_ConvexHullShapeSettings_default(JPC_ConvexHullShapeSettings* object) {
 	object->UserData = 0;
-
-	// TODO: Material
+	object->Material = nullptr;
 	object->Density = 1000.0;
 
 	object->Points = nullptr;
@@ -2114,6 +2094,13 @@ JPC_API void JPC_MutableCompoundShape_AdjustCenterOfMass(JPC_MutableCompoundShap
 	JPH::MutableCompoundShape* self_jph = JPC_MutableCompoundShape_to_jph(self);
 
 	self_jph->AdjustCenterOfMass();
+}
+
+JPC_API JPC_MutableCompoundShape* JPC_MutableCompoundShape_Clone(JPC_MutableCompoundShape* self) {
+	JPH::Ref<JPH::MutableCompoundShape> clone = JPC_MutableCompoundShape_to_jph(self)->Clone();
+	JPH::MutableCompoundShape* raw = clone.GetPtr();
+	raw->AddRef(); // transfer ownership to caller (Ref<> will Release on scope exit, net +1)
+	return to_jpc(raw);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2315,10 +2302,6 @@ JPC_API JPC_BroadPhaseLayer JPC_Body_GetBroadPhaseLayer(const JPC_Body* self) {
 JPC_API JPC_ObjectLayer JPC_Body_GetObjectLayer(const JPC_Body* self) {
 	return to_jph(self)->GetObjectLayer();
 }
-
-// JPC_API const CollisionGroup & JPC_Body_GetCollisionGroup(const JPC_Body* self);
-// JPC_API CollisionGroup & JPC_Body_GetCollisionGroup(JPC_Body* self);
-// JPC_API void JPC_Body_SetCollisionGroup(JPC_Body* self, const CollisionGroup &inGroup);
 
 JPC_API bool JPC_Body_GetAllowSleeping(const JPC_Body* self) {
 	return to_jph(self)->GetAllowSleeping();
@@ -2598,19 +2581,13 @@ JPC_API JPC_Body* JPC_BodyInterface_CreateBody(JPC_BodyInterface* self, const JP
 	return to_jpc(to_jph(self)->CreateBody(to_jph(inSettings)));
 }
 
-// JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBody(JPC_BodyInterface *self, const SoftBodyCreationSettings &inSettings);
-
 JPC_API JPC_Body* JPC_BodyInterface_CreateBodyWithID(JPC_BodyInterface *self, JPC_BodyID inBodyID, const JPC_BodyCreationSettings* inSettings) {
 	return to_jpc(to_jph(self)->CreateBodyWithID(to_jph(inBodyID), to_jph(inSettings)));
 }
 
-// JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithID(JPC_BodyInterface *self, JPC_BodyID inBodyID, const SoftBodyCreationSettings* inSettings);
-
 JPC_API JPC_Body* JPC_BodyInterface_CreateBodyWithoutID(const JPC_BodyInterface *self, const JPC_BodyCreationSettings* inSettings) {
 	return to_jpc(to_jph(self)->CreateBodyWithoutID(to_jph(inSettings)));
 }
-
-// JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithoutID(const JPC_BodyInterface *self, const SoftBodyCreationSettings* inSettings);
 
 JPC_API void JPC_BodyInterface_DestroyBodyWithoutID(const JPC_BodyInterface *self, JPC_Body *inBody) {
 	to_jph(self)->DestroyBodyWithoutID(to_jph(inBody));
@@ -2620,23 +2597,27 @@ JPC_API bool JPC_BodyInterface_AssignBodyID(JPC_BodyInterface *self, JPC_Body *i
 	return to_jph(self)->AssignBodyID(to_jph(ioBody));
 }
 
-// JPC_API bool JPC_BodyInterface_AssignBodyID(JPC_BodyInterface *self, JPC_Body *ioBody, JPC_BodyID inBodyID);
-
 JPC_API JPC_Body* JPC_BodyInterface_UnassignBodyID(JPC_BodyInterface *self, JPC_BodyID inBodyID) {
 	return to_jpc(to_jph(self)->UnassignBodyID(to_jph(inBodyID)));
 }
 
-// JPC_API void JPC_BodyInterface_UnassignBodyIDs(JPC_BodyInterface *self, const JPC_BodyID *inBodyIDs, int inNumber, JPC_Body **outBodies) {
-// 	return to_jph(self)->UnassignBodyIDs(to_jph(inBodyIDs), inNumber, to_jph(outBodies));
-// }
+JPC_API void JPC_BodyInterface_UnassignBodyIDs(JPC_BodyInterface *self, const JPC_BodyID *inBodyIDs, int inNumber, JPC_Body **outBodies) {
+	std::vector<JPH::BodyID> ids;
+	ids.reserve(inNumber);
+	for (int i = 0; i < inNumber; i++) ids.push_back(to_jph(inBodyIDs[i]));
+	to_jph(self)->UnassignBodyIDs(ids.data(), inNumber, reinterpret_cast<JPH::Body**>(outBodies));
+}
 
 JPC_API void JPC_BodyInterface_DestroyBody(JPC_BodyInterface *self, JPC_BodyID inBodyID) {
 	to_jph(self)->DestroyBody(to_jph(inBodyID));
 }
 
-// JPC_API void JPC_BodyInterface_DestroyBodies(JPC_BodyInterface *self, const JPC_BodyID *inBodyIDs, int inNumber) {
-// 	return to_jph(self)->DestroyBodies(to_jph(inBodyIDs), int inNumber);
-// }
+JPC_API void JPC_BodyInterface_DestroyBodies(JPC_BodyInterface *self, const JPC_BodyID *inBodyIDs, int inNumber) {
+	std::vector<JPH::BodyID> ids;
+	ids.reserve(inNumber);
+	for (int i = 0; i < inNumber; i++) ids.push_back(to_jph(inBodyIDs[i]));
+	to_jph(self)->DestroyBodies(ids.data(), inNumber);
+}
 
 JPC_API void JPC_BodyInterface_AddBody(JPC_BodyInterface *self, JPC_BodyID inBodyID, JPC_Activation inActivationMode) {
 	to_jph(self)->AddBody(to_jph(inBodyID), to_jph(inActivationMode));
@@ -2653,8 +2634,6 @@ JPC_API bool JPC_BodyInterface_IsAdded(const JPC_BodyInterface *self, JPC_BodyID
 JPC_API JPC_BodyID JPC_BodyInterface_CreateAndAddBody(JPC_BodyInterface *self, const JPC_BodyCreationSettings* inSettings, JPC_Activation inActivationMode) {
 	return to_jpc(to_jph(self)->CreateAndAddBody(to_jph(inSettings), to_jph(inActivationMode)));
 }
-
-// JPC_API JPC_BodyID JPC_BodyInterface_CreateAndAddSoftBody(JPC_BodyInterface *self, const SoftBodyCreationSettings &inSettings, JPC_Activation inActivationMode);
 
 JPC_API void* JPC_BodyInterface_AddBodiesPrepare(JPC_BodyInterface *self, JPC_BodyID *ioBodies, int inNumber) {
 	return to_jph(self)->AddBodiesPrepare(to_jph(ioBodies), inNumber);
@@ -2680,8 +2659,6 @@ JPC_API void JPC_BodyInterface_ActivateBodies(JPC_BodyInterface *self, JPC_BodyI
 	to_jph(self)->ActivateBodies(to_jph(inBodyIDs), inNumber);
 }
 
-// JPC_API void JPC_BodyInterface_ActivateBodiesInAABox(JPC_BodyInterface *self, const AABox &inBox, const BroadPhaseLayerFilter &inBroadPhaseLayerFilter, const ObjectLayerFilter &inObjectLayerFilter);
-
 JPC_API void JPC_BodyInterface_DeactivateBody(JPC_BodyInterface *self, JPC_BodyID inBodyID) {
 	to_jph(self)->DeactivateBody(to_jph(inBodyID));
 }
@@ -2693,9 +2670,6 @@ JPC_API void JPC_BodyInterface_DeactivateBodies(JPC_BodyInterface *self, JPC_Bod
 JPC_API bool JPC_BodyInterface_IsActive(const JPC_BodyInterface *self, JPC_BodyID inBodyID) {
 	return to_jph(self)->IsActive(to_jph(inBodyID));
 }
-
-// TwoBodyConstraint * JPC_BodyInterface_CreateConstraint(JPC_BodyInterface *self, const TwoBodyConstraintSettings *inSettings, JPC_BodyID inBodyID1, JPC_BodyID inBodyID2);
-// JPC_API void JPC_BodyInterface_ActivateConstraint(JPC_BodyInterface *self, const TwoBodyConstraint *inConstraint);
 
 JPC_API const JPC_Shape* JPC_BodyInterface_GetShape(const JPC_BodyInterface *self, JPC_BodyID inBodyID) {
 	// NOTE: This pointer will only be alive as long as BodyInterface holds onto it!
@@ -2911,7 +2885,9 @@ JPC_API void JPC_BodyInterface_SetUserData(const JPC_BodyInterface *self, JPC_Bo
 	to_jph(self)->SetUserData(to_jph(inBodyID), inUserData);
 }
 
-// const PhysicsMaterial* JPC_BodyInterface_GetMaterial(const JPC_BodyInterface *self, JPC_BodyID inBodyID, const SubShapeID &inSubShapeID);
+JPC_API const JPC_PhysicsMaterial* JPC_BodyInterface_GetMaterial(const JPC_BodyInterface *self, JPC_BodyID inBodyID, JPC_SubShapeID inSubShapeID) {
+	return to_jpc(to_jph(self)->GetMaterial(to_jph(inBodyID), JPC_SubShapeID_to_jph(inSubShapeID)));
+}
 
 JPC_API void JPC_BodyInterface_InvalidateContactCache(JPC_BodyInterface *self, JPC_BodyID inBodyID) {
 	to_jph(self)->InvalidateContactCache(to_jph(inBodyID));
@@ -4462,8 +4438,6 @@ JPC_API JPC_PathConstraint* JPC_PathConstraintSettings_Create(
 ////////////////////////////////////////////////////////////////////////////////
 // PhysicsMaterial
 
-OPAQUE_WRAPPER(JPC_PhysicsMaterial, JPH::PhysicsMaterial)
-
 JPC_API uint32_t JPC_PhysicsMaterial_GetRefCount(const JPC_PhysicsMaterial* self) {
 	return to_jph(self)->GetRefCount();
 }
@@ -5099,6 +5073,10 @@ JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithID(JPC_BodyInterface* self
 
 JPC_API JPC_BodyID JPC_BodyInterface_CreateAndAddSoftBody(JPC_BodyInterface* self, const JPC_SoftBodyCreationSettings* inSettings, JPC_Activation inActivationMode) {
 	return to_jpc(to_jph(self)->CreateAndAddSoftBody(JPC_SoftBodyCreationSettings_to_jph(inSettings), to_jph(inActivationMode)));
+}
+
+JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithoutID(const JPC_BodyInterface* self, const JPC_SoftBodyCreationSettings* inSettings) {
+	return to_jpc(to_jph(self)->CreateSoftBodyWithoutID(JPC_SoftBodyCreationSettings_to_jph(inSettings)));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -381,6 +381,8 @@ JPC_API void JPC_GroupFilter_delete(JPC_GroupFilter* object);
 typedef struct JPC_BroadPhaseLayerInterfaceFns {
 	uint (*GetNumBroadPhaseLayers)(const void *self);
 	JPC_BroadPhaseLayer (*GetBroadPhaseLayer)(const void *self, JPC_ObjectLayer inLayer);
+	/// optional — only called when JPH_EXTERNAL_PROFILE or JPH_PROFILE_ENABLED is defined; may be NULL.
+	const char* (*GetBroadPhaseLayerName)(const void *self, JPC_BroadPhaseLayer inLayer);
 } JPC_BroadPhaseLayerInterfaceFns;
 
 typedef struct JPC_BroadPhaseLayerInterface JPC_BroadPhaseLayerInterface;
@@ -855,20 +857,10 @@ JPC_API float JPC_SixDOFConstraint_GetLimitsMax(const JPC_SixDOFConstraint* self
 
 JPC_API bool JPC_SixDOFConstraint_IsFreeAxis(const JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis);
 
-// const SpringSettings & GetLimitsSpringSettings(JPC_SixDOFConstraint_Axis inAxis) const { JPH_ASSERT(inAxis < JPC_SixDOFConstraint_Axis::NumTranslation); return mLimitsSpringSettings[inAxis]; }
-// void SetLimitsSpringSettings(JPC_SixDOFConstraint_Axis inAxis, const SpringSettings& inLimitsSpringSettings) { JPH_ASSERT(inAxis < JPC_SixDOFConstraint_Axis::NumTranslation); mLimitsSpringSettings[inAxis] = inLimitsSpringSettings; CacheHasSpringLimits(); }
-
 JPC_API void JPC_SixDOFConstraint_SetMaxFriction(JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis, float inFriction);
 JPC_API float JPC_SixDOFConstraint_GetMaxFriction(const JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis);
 
 JPC_API JPC_Quat JPC_SixDOFConstraint_GetRotationInConstraintSpace(const JPC_SixDOFConstraint* self);
-
-/// Motor settings
-// MotorSettings & GetMotorSettings(EAxis inAxis)
-// const MotorSettings & GetMotorSettings(EAxis inAxis) const
-
-// void SetMotorState(EAxis inAxis, EMotorState inState);
-// EMotorState GetMotorState(EAxis inAxis) const
 
 JPC_API JPC_Vec3 JPC_SixDOFConstraint_GetTargetVelocityCS(const JPC_SixDOFConstraint* self);
 JPC_API void JPC_SixDOFConstraint_SetTargetVelocityCS(JPC_SixDOFConstraint* self, JPC_Vec3 inVelocity);
@@ -1011,7 +1003,7 @@ typedef struct JPC_SixDOFConstraintSettings {
 	float LimitMin[6];
 	float LimitMax[6];
 
-	// TODO: LimitsSpringSettings
+	JPC_SpringSettings LimitsSpringSettings[3];
 } JPC_SixDOFConstraintSettings;
 
 JPC_API void JPC_SixDOFConstraintSettings_default(JPC_SixDOFConstraintSettings* settings);
@@ -1118,6 +1110,11 @@ JPC_API JPC_SliderConstraint* JPC_SliderConstraintSettings_Create(
 	JPC_Body* inBody2);
 
 ////////////////////////////////////////////////////////////////////////////////
+// PhysicsMaterial (forward declaration — full definition is further below)
+
+typedef struct JPC_PhysicsMaterial JPC_PhysicsMaterial;
+
+////////////////////////////////////////////////////////////////////////////////
 // TriangleShapeSettings
 
 typedef struct JPC_TriangleShapeSettings {
@@ -1125,7 +1122,7 @@ typedef struct JPC_TriangleShapeSettings {
 	uint64_t UserData;
 
 	// ConvexShapeSettings
-	// TODO: Material
+	const JPC_PhysicsMaterial* Material;
 	float Density;
 
 	// TriangleShapeSettings
@@ -1167,7 +1164,7 @@ typedef struct JPC_BoxShapeSettings {
 	uint64_t UserData;
 
 	// ConvexShapeSettings
-	// TODO: Material
+	const JPC_PhysicsMaterial* Material;
 	float Density;
 
 	// BoxShapeSettings
@@ -1186,7 +1183,7 @@ typedef struct JPC_SphereShapeSettings {
 	uint64_t UserData;
 
 	// ConvexShapeSettings
-	// TODO: Material
+	const JPC_PhysicsMaterial* Material;
 	float Density;
 
 	// SphereShapeSettings
@@ -1204,7 +1201,7 @@ typedef struct JPC_CapsuleShapeSettings {
 	uint64_t UserData;
 
 	// ConvexShapeSettings
-	// TODO: Material
+	const JPC_PhysicsMaterial* Material;
 	float Density;
 
 	// CapsuleShapeSettings
@@ -1223,7 +1220,7 @@ typedef struct JPC_CylinderShapeSettings {
 	uint64_t UserData;
 
 	// ConvexShapeSettings
-	// TODO: Material
+	const JPC_PhysicsMaterial* Material;
 	float Density;
 
 	// CylinderShapeSettings
@@ -1243,7 +1240,7 @@ typedef struct JPC_PlaneShapeSettings {
 	uint64_t UserData;
 
 	// PlaneShapeSettings
-	// TODO: Material
+	const JPC_PhysicsMaterial* Material;
 	JPC_Vec3 Normal;
 	float Constant;
 	float HalfExtent;
@@ -1260,7 +1257,7 @@ typedef struct JPC_ConvexHullShapeSettings {
 	uint64_t UserData;
 
 	// ConvexShapeSettings
-	// TODO: Material
+	const JPC_PhysicsMaterial* Material;
 	float Density;
 
 	// ConvexHullShapeSettings
@@ -1321,9 +1318,7 @@ JPC_API void JPC_MutableCompoundShape_ModifyShape(JPC_MutableCompoundShape* self
 JPC_API void JPC_MutableCompoundShape_ModifyShape2(JPC_MutableCompoundShape* self, uint inIndex, JPC_Vec3 inPosition, JPC_Quat inRotation, const JPC_Shape* inShape);
 JPC_API void JPC_MutableCompoundShape_AdjustCenterOfMass(JPC_MutableCompoundShape* self);
 
-// TODO:
-// JPC_API void JPC_MutableCompoundShape_ModifyShapes(JPC_MutableCompoundShape* self, ...);
-// JPC_API JPC_MutableCompoundShape* JPC_MutableCompoundShape_Clone(JPC_MutableCompoundShape* self);
+JPC_API JPC_MutableCompoundShape* JPC_MutableCompoundShape_Clone(JPC_MutableCompoundShape* self);
 
 ////////////////////////////////////////////////////////////////////////////////
 // MutableCompoundShapeSettings -> CompoundShapeSettings -> ShapeSettings
@@ -1415,10 +1410,6 @@ JPC_API JPC_MotionType JPC_Body_GetMotionType(const JPC_Body* self);
 JPC_API void JPC_Body_SetMotionType(JPC_Body* self, JPC_MotionType inMotionType);
 JPC_API JPC_BroadPhaseLayer JPC_Body_GetBroadPhaseLayer(const JPC_Body* self);
 JPC_API JPC_ObjectLayer JPC_Body_GetObjectLayer(const JPC_Body* self);
-
-// JPC_API const CollisionGroup & JPC_Body_GetCollisionGroup(const JPC_Body* self);
-// JPC_API CollisionGroup & JPC_Body_GetCollisionGroup(JPC_Body* self);
-// JPC_API void JPC_Body_SetCollisionGroup(JPC_Body* self, const CollisionGroup &inGroup);
 
 JPC_API bool JPC_Body_GetAllowSleeping(const JPC_Body* self);
 JPC_API void JPC_Body_SetAllowSleeping(JPC_Body* self, bool inAllow);
@@ -1538,14 +1529,8 @@ JPC_API JPC_Body* JPC_BodyInterface_CreateBody(JPC_BodyInterface* self, const JP
 JPC_API JPC_Body* JPC_BodyInterface_CreateBodyWithID(JPC_BodyInterface *self, JPC_BodyID inBodyID, const JPC_BodyCreationSettings* inSettings);
 JPC_API JPC_Body* JPC_BodyInterface_CreateBodyWithoutID(const JPC_BodyInterface *self, const JPC_BodyCreationSettings* inSettings);
 
-// JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBody(JPC_BodyInterface *self, const SoftBodyCreationSettings &inSettings);
-// JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithID(JPC_BodyInterface *self, JPC_BodyID inBodyID, const SoftBodyCreationSettings* inSettings);
-// JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithoutID(const JPC_BodyInterface *self, const SoftBodyCreationSettings* inSettings);
-
 JPC_API void JPC_BodyInterface_DestroyBodyWithoutID(const JPC_BodyInterface *self, JPC_Body *inBody);
 JPC_API bool JPC_BodyInterface_AssignBodyID(JPC_BodyInterface *self, JPC_Body *ioBody);
-
-// JPC_API bool JPC_BodyInterface_AssignBodyID(JPC_BodyInterface *self, JPC_Body *ioBody, JPC_BodyID inBodyID);
 
 JPC_API JPC_Body* JPC_BodyInterface_UnassignBodyID(JPC_BodyInterface *self, JPC_BodyID inBodyID);
 JPC_API void JPC_BodyInterface_UnassignBodyIDs(JPC_BodyInterface *self, const JPC_BodyID *inBodyIDs, int inNumber, JPC_Body **outBodies);
@@ -1556,23 +1541,15 @@ JPC_API void JPC_BodyInterface_RemoveBody(JPC_BodyInterface *self, JPC_BodyID in
 JPC_API bool JPC_BodyInterface_IsAdded(const JPC_BodyInterface *self, JPC_BodyID inBodyID);
 JPC_API JPC_BodyID JPC_BodyInterface_CreateAndAddBody(JPC_BodyInterface *self, const JPC_BodyCreationSettings* inSettings, JPC_Activation inActivationMode);
 
-// JPC_API JPC_BodyID JPC_BodyInterface_CreateAndAddSoftBody(JPC_BodyInterface *self, const SoftBodyCreationSettings &inSettings, JPC_Activation inActivationMode);
-
 JPC_API void* JPC_BodyInterface_AddBodiesPrepare(JPC_BodyInterface *self, JPC_BodyID *ioBodies, int inNumber);
 JPC_API void JPC_BodyInterface_AddBodiesFinalize(JPC_BodyInterface *self, JPC_BodyID *ioBodies, int inNumber, void* inAddState, JPC_Activation inActivationMode);
 JPC_API void JPC_BodyInterface_AddBodiesAbort(JPC_BodyInterface *self, JPC_BodyID *ioBodies, int inNumber, void* inAddState);
 JPC_API void JPC_BodyInterface_RemoveBodies(JPC_BodyInterface *self, JPC_BodyID *ioBodies, int inNumber);
 JPC_API void JPC_BodyInterface_ActivateBody(JPC_BodyInterface *self, JPC_BodyID inBodyID);
 JPC_API void JPC_BodyInterface_ActivateBodies(JPC_BodyInterface *self, JPC_BodyID *inBodyIDs, int inNumber);
-
-// JPC_API void JPC_BodyInterface_ActivateBodiesInAABox(JPC_BodyInterface *self, const AABox &inBox, const BroadPhaseLayerFilter &inBroadPhaseLayerFilter, const ObjectLayerFilter &inObjectLayerFilter);
-
 JPC_API void JPC_BodyInterface_DeactivateBody(JPC_BodyInterface *self, JPC_BodyID inBodyID);
 JPC_API void JPC_BodyInterface_DeactivateBodies(JPC_BodyInterface *self, JPC_BodyID *inBodyIDs, int inNumber);
 JPC_API bool JPC_BodyInterface_IsActive(const JPC_BodyInterface *self, JPC_BodyID inBodyID);
-
-// TwoBodyConstraint * JPC_BodyInterface_CreateConstraint(JPC_BodyInterface *self, const TwoBodyConstraintSettings *inSettings, JPC_BodyID inBodyID1, JPC_BodyID inBodyID2);
-// JPC_API void JPC_BodyInterface_ActivateConstraint(JPC_BodyInterface *self, const TwoBodyConstraint *inConstraint);
 JPC_API const JPC_Shape* JPC_BodyInterface_GetShape(const JPC_BodyInterface *self, JPC_BodyID inBodyID);
 
 JPC_API void JPC_BodyInterface_SetShape(const JPC_BodyInterface *self, JPC_BodyID inBodyID, const JPC_Shape *inShape, bool inUpdateMassProperties, JPC_Activation inActivationMode);
@@ -1629,7 +1606,8 @@ JPC_API JPC_TransformedShape* JPC_BodyInterface_GetTransformedShape(const JPC_Bo
 JPC_API uint64_t JPC_BodyInterface_GetUserData(const JPC_BodyInterface *self, JPC_BodyID inBodyID);
 JPC_API void JPC_BodyInterface_SetUserData(const JPC_BodyInterface *self, JPC_BodyID inBodyID, uint64_t inUserData);
 
-// const PhysicsMaterial* JPC_BodyInterface_GetMaterial(const JPC_BodyInterface *self, JPC_BodyID inBodyID, const SubShapeID &inSubShapeID);
+/// material of the sub-shape at inSubShapeID — pointer is valid while body is alive.
+JPC_API const JPC_PhysicsMaterial* JPC_BodyInterface_GetMaterial(const JPC_BodyInterface *self, JPC_BodyID inBodyID, JPC_SubShapeID inSubShapeID);
 
 JPC_API void JPC_BodyInterface_InvalidateContactCache(JPC_BodyInterface *self, JPC_BodyID inBodyID);
 
@@ -2754,6 +2732,8 @@ JPC_API void JPC_SoftBodyCreationSettings_default(JPC_SoftBodyCreationSettings* 
 
 JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBody(JPC_BodyInterface* self, const JPC_SoftBodyCreationSettings* inSettings);
 JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithID(JPC_BodyInterface* self, JPC_BodyID inBodyID, const JPC_SoftBodyCreationSettings* inSettings);
+/// creates a soft body without assigning a BodyID — caller must later call AssignBodyID then AddBody.
+JPC_API JPC_Body* JPC_BodyInterface_CreateSoftBodyWithoutID(const JPC_BodyInterface* self, const JPC_SoftBodyCreationSettings* inSettings);
 JPC_API JPC_BodyID JPC_BodyInterface_CreateAndAddSoftBody(JPC_BodyInterface* self, const JPC_SoftBodyCreationSettings* inSettings, JPC_Activation inActivationMode);
 
 ////////////////////////////////////////////////////////////////////////////////
