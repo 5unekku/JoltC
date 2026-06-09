@@ -60,15 +60,21 @@ static float JPC_PI = 3.14159265358979323846f;
 extern "C" {
 #endif
 
+/// register the default system allocator with Jolt.
 JPC_API void JPC_RegisterDefaultAllocator();
+/// create the global shape/constraint factory — required before registering types.
 JPC_API void JPC_FactoryInit();
+/// destroy the global factory.
 JPC_API void JPC_FactoryDelete();
+/// register all built-in Jolt shape and constraint types.
 JPC_API void JPC_RegisterTypes();
+/// unregister all built-in types (counterpart to JPC_RegisterTypes).
 JPC_API void JPC_UnregisterTypes();
 
 ////////////////////////////////////////////////////////////////////////////////
 // Primitive types
 
+/// unaligned 3-component float — used for mesh vertex storage.
 typedef struct JPC_Float3 {
 	float x;
 	float y;
@@ -77,7 +83,7 @@ typedef struct JPC_Float3 {
 
 ENSURE_SIZE_ALIGN(JPC_Float3, JPH::Float3)
 
-// Jolt has no type named Vec2 but uses Vector<2> in its API sometimes
+/// 2-component float vector (no alignment requirement).
 typedef struct JPC_Vec2 {
 	float x;
 	float y;
@@ -85,6 +91,7 @@ typedef struct JPC_Vec2 {
 
 ENSURE_SIZE_ALIGN(JPC_Vec2, JPH::Vector<2>)
 
+/// SIMD-aligned 3-component float vector. `_w` is padding and must not be read.
 typedef struct JPC_Vec3 {
 	alignas(JPC_VECTOR_ALIGNMENT) float x;
 	float y;
@@ -94,6 +101,7 @@ typedef struct JPC_Vec3 {
 
 ENSURE_SIZE_ALIGN(JPC_Vec3, JPH::Vec3)
 
+/// SIMD-aligned 4-component float vector.
 typedef struct JPC_Vec4 {
 	alignas(JPC_VECTOR_ALIGNMENT) float x;
 	float y;
@@ -103,6 +111,7 @@ typedef struct JPC_Vec4 {
 
 ENSURE_SIZE_ALIGN(JPC_Vec4, JPH::Vec4)
 
+/// double-precision 3-component vector (used when `JPC_DOUBLE_PRECISION` is defined).
 typedef struct JPC_DVec3 {
 	alignas(JPC_DVECTOR_ALIGNMENT) double x;
 	double y;
@@ -112,6 +121,7 @@ typedef struct JPC_DVec3 {
 
 ENSURE_SIZE_ALIGN(JPC_DVec3, JPH::DVec3)
 
+/// SIMD-aligned unit quaternion (x, y, z, w).
 typedef struct JPC_Quat {
 	alignas(JPC_VECTOR_ALIGNMENT) float x;
 	float y;
@@ -121,6 +131,7 @@ typedef struct JPC_Quat {
 
 ENSURE_SIZE_ALIGN(JPC_Quat, JPH::Quat)
 
+/// column-major 4x4 float matrix. first three cols are Vec4, last col is Vec3.
 typedef struct JPC_Mat44 {
 	alignas(JPC_VECTOR_ALIGNMENT) JPC_Vec4 col[3];
 	JPC_Vec3 col3;
@@ -128,6 +139,7 @@ typedef struct JPC_Mat44 {
 
 ENSURE_SIZE_ALIGN(JPC_Mat44, JPH::Mat44)
 
+/// double-precision column-major 4x4 matrix (used when `JPC_DOUBLE_PRECISION` is defined).
 typedef struct JPC_DMat44 {
 	alignas(JPC_DVECTOR_ALIGNMENT) JPC_Vec4 col[3];
 	JPC_DVec3 col3;
@@ -135,6 +147,7 @@ typedef struct JPC_DMat44 {
 
 ENSURE_SIZE_ALIGN(JPC_DMat44, JPH::DMat44)
 
+/// sRGB color with alpha (8 bits per channel).
 typedef struct JPC_Color {
 	alignas(uint32_t) uint8_t r;
 	uint8_t g;
@@ -156,12 +169,15 @@ ENSURE_SIZE_ALIGN(JPC_Color, JPH::Color)
 
 ENSURE_SIZE_ALIGN(JPC_RVec3, JPH::RVec3)
 
+/// opaque body identifier — use with JPC_BodyInterface.
 typedef uint32_t JPC_BodyID;
 ENSURE_SIZE_ALIGN(JPC_BodyID, JPH::BodyID)
 
+/// identifies a sub-shape within a compound or mesh shape.
 typedef uint32_t JPC_SubShapeID;
 ENSURE_SIZE_ALIGN(JPC_SubShapeID, JPH::SubShapeID)
 
+/// index into the broadphase layer table.
 typedef uint8_t JPC_BroadPhaseLayer;
 ENSURE_SIZE_ALIGN(JPC_BroadPhaseLayer, JPH::BroadPhaseLayer)
 
@@ -179,12 +195,14 @@ ENSURE_SIZE_ALIGN(JPC_BroadPhaseLayer, JPH::BroadPhaseLayer)
 
 ENSURE_SIZE_ALIGN(JPC_ObjectLayer, JPH::ObjectLayer)
 
+/// triangle defined by three vertex indices with no material slot.
 typedef struct JPC_IndexedTriangleNoMaterial {
 	uint32_t idx[3];
 } JPC_IndexedTriangleNoMaterial;
 
 ENSURE_SIZE_ALIGN(JPC_IndexedTriangleNoMaterial, JPH::IndexedTriangleNoMaterial)
 
+/// triangle with vertex indices, a material slot, and user data.
 typedef struct JPC_IndexedTriangle {
 	uint32_t idx[3];
 	uint32_t materialIndex;
@@ -193,27 +211,30 @@ typedef struct JPC_IndexedTriangle {
 
 ENSURE_SIZE_ALIGN(JPC_IndexedTriangle, JPH::IndexedTriangle)
 
+/// ray in float-precision space (origin + direction, no world offset).
 typedef struct JPC_RayCast {
 	JPC_Vec3 Origin;
 	JPC_Vec3 Direction;
 } JPC_RayCast;
 
+/// ray in world-precision space (`RVec3` origin; `Vec3` direction).
 typedef struct JPC_RRayCast {
 	JPC_RVec3 Origin;
 	JPC_Vec3 Direction;
 } JPC_RRayCast;
 
+/// result of a ray cast — body hit, fraction along the ray, and sub-shape.
 typedef struct JPC_RayCastResult {
 	JPC_BodyID BodyID;
-	float Fraction;
+	float Fraction;      ///< 0..1 along the ray
 	JPC_SubShapeID SubShapeID2;
 } JPC_RayCastResult;
 
+/// result of a shape cast — contact points, penetration, and hit fraction.
 typedef struct JPC_ShapeCastResult {
-	// From CollideShapeResult
-	JPC_Vec3 ContactPointOn1;
-	JPC_Vec3 ContactPointOn2;
-	JPC_Vec3 PenetrationAxis;
+	JPC_Vec3 ContactPointOn1;   ///< contact point on the cast shape
+	JPC_Vec3 ContactPointOn2;   ///< contact point on the hit shape
+	JPC_Vec3 PenetrationAxis;   ///< axis pointing from shape 2 to shape 1
 	float PenetrationDepth;
 	JPC_SubShapeID SubShapeID1;
 	JPC_SubShapeID SubShapeID2;
@@ -221,15 +242,15 @@ typedef struct JPC_ShapeCastResult {
 	// Face Shape1Face;
 	// Face Shape2Face;
 
-	// From ShapeCastResult
-	float Fraction;
+	float Fraction;        ///< 0..1 along the cast direction
 	bool IsBackFaceHit;
 } JPC_ShapeCastResult;
 
+/// result of a shape overlap test — contact points and penetration depth.
 typedef struct JPC_CollideShapeResult {
 	JPC_Vec3 ContactPointOn1;
 	JPC_Vec3 ContactPointOn2;
-	JPC_Vec3 PenetrationAxis;
+	JPC_Vec3 PenetrationAxis;   ///< axis pointing from shape 2 to shape 1
 	float PenetrationDepth;
 	JPC_SubShapeID SubShapeID1;
 	JPC_SubShapeID SubShapeID2;
@@ -326,12 +347,14 @@ typedef uint32_t JPC_GroupID;
 typedef uint32_t JPC_SubGroupID;
 typedef struct JPC_GroupFilter JPC_GroupFilter;
 
+/// collision filter group — optional filter + group/subgroup IDs for fine-grained filtering.
 typedef struct JPC_CollisionGroup {
 	const JPC_GroupFilter* GroupFilter;
 	JPC_GroupID GroupID;
 	JPC_SubGroupID SubGroupID;
 } JPC_CollisionGroup;
 
+/// vtable for a custom collision group filter.
 typedef struct JPC_GroupFilterFns {
 	bool (*CanCollide)(const void *self, const JPC_CollisionGroup* inGroup1, const JPC_CollisionGroup* inGroup2);
 } JPC_GroupFilterFns;
@@ -1955,6 +1978,7 @@ JPC_API bool JPC_CharacterVirtual_SetShape(JPC_CharacterVirtual* self, JPC_Chara
 ////////////////////////////////////////////////////////////////////////////////
 // AABox
 
+/// axis-aligned bounding box defined by min and max corners.
 typedef struct JPC_AABox {
 	JPC_Vec3 Min;
 	JPC_Vec3 Max;
@@ -2966,6 +2990,7 @@ JPC_API JPC_RMat44 JPC_VehicleConstraint_GetWheelWorldTransform(const JPC_Vehicl
 ////////////////////////////////////////////////////////////////////////////////
 // PhysicsSettings struct
 
+/// global simulation tuning parameters — mirrors `JPH::PhysicsSettings`.
 typedef struct JPC_PhysicsSettings {
 	int   MaxInFlightBodyPairs;
 	int   StepListenersBatchSize;
@@ -3001,6 +3026,7 @@ JPC_API void JPC_PhysicsSystem_SetPhysicsSettings(JPC_PhysicsSystem* self, JPC_P
 ////////////////////////////////////////////////////////////////////////////////
 // BodyStats struct
 
+/// body count summary by type and activation state.
 typedef struct JPC_BodyStats {
 	uint NumBodies;
 	uint MaxBodies;
@@ -3032,6 +3058,7 @@ JPC_API void JPC_PhysicsSystem_DrawConstraintReferenceFrame(JPC_PhysicsSystem* s
 ////////////////////////////////////////////////////////////////////////////////
 // BodyActivationListener vtable bridge
 
+/// vtable for a body activation state listener.
 typedef struct {
 	void (*OnBodyActivated)(void* self, JPC_BodyID inBodyID, uint64_t inBodyUserData);
 	void (*OnBodyDeactivated)(void* self, JPC_BodyID inBodyID, uint64_t inBodyUserData);
@@ -3048,6 +3075,7 @@ JPC_API JPC_BodyActivationListener* JPC_PhysicsSystem_GetBodyActivationListener(
 ////////////////////////////////////////////////////////////////////////////////
 // CombineFunction — friction / restitution combiner
 
+/// function type for combining friction or restitution from two bodies/sub-shapes.
 typedef float (*JPC_CombineFunction)(const JPC_Body* body1, JPC_SubShapeID subShapeId1, const JPC_Body* body2, JPC_SubShapeID subShapeId2);
 
 JPC_API void JPC_PhysicsSystem_SetCombineFriction(JPC_PhysicsSystem* self, JPC_CombineFunction inCombineFriction);
@@ -3057,11 +3085,12 @@ JPC_API void JPC_PhysicsSystem_SetCombineRestitution(JPC_PhysicsSystem* self, JP
 // SoftBodyContactListener vtable bridge
 
 // must be declared before the listener fns struct that references them
+/// per-contact tuning for soft body vs rigid body collisions.
 typedef struct JPC_SoftBodyContactSettings {
-	float InvMassScale1;
-	float InvMassScale2;
+	float InvMassScale1;   ///< scale on soft body inverse mass (1.0 = normal)
+	float InvMassScale2;   ///< scale on rigid body inverse mass
 	float InvInertiaScale2;
-	bool  IsSensor;
+	bool  IsSensor;        ///< if true, contact is reported but no impulse applied
 } JPC_SoftBodyContactSettings;
 
 typedef struct JPC_SoftBodyManifold JPC_SoftBodyManifold;
@@ -3131,8 +3160,9 @@ JPC_API void JPC_VehicleConstraint_SetNumStepsBetweenCollisionTestInactive(JPC_V
 ////////////////////////////////////////////////////////////////////////////////
 // BroadPhaseQuery
 
-// collector for methods that return body IDs (CollideAABox, CollideSphere, CollidePoint, CollideOrientedBox)
+/// collector for broadphase overlap queries — receives body IDs.
 typedef struct JPC_BodyIDCollector JPC_BodyIDCollector;
+/// vtable for JPC_BodyIDCollector.
 typedef struct {
 	void (*Reset)(void* self);
 	void (*AddHit)(void* self, JPC_BodyID bodyId);
@@ -3141,13 +3171,15 @@ typedef struct {
 JPC_API JPC_BodyIDCollector* JPC_BodyIDCollector_new(void* self, JPC_BodyIDCollectorFns fns);
 JPC_API void JPC_BodyIDCollector_delete(JPC_BodyIDCollector* object);
 
-// result + collector for methods that cast shapes through the broadphase (CastRay, CastAABox)
+/// hit result from a broadphase cast (CastRay or CastAABox).
 typedef struct {
 	JPC_BodyID BodyID;
-	float      Fraction;
+	float      Fraction;  ///< 0..1 along the cast direction
 } JPC_BroadPhaseCastResult;
 
+/// collector for broadphase cast queries — receives (body ID, fraction) pairs.
 typedef struct JPC_BroadPhaseCastCollector JPC_BroadPhaseCastCollector;
+/// vtable for JPC_BroadPhaseCastCollector.
 typedef struct {
 	void (*Reset)(void* self);
 	void (*AddHit)(void* self, JPC_BroadPhaseCastCollector* base, const JPC_BroadPhaseCastResult* result);
@@ -3155,14 +3187,16 @@ typedef struct {
 
 JPC_API JPC_BroadPhaseCastCollector* JPC_BroadPhaseCastCollector_new(void* self, JPC_BroadPhaseCastCollectorFns fns);
 JPC_API void JPC_BroadPhaseCastCollector_delete(JPC_BroadPhaseCastCollector* object);
+/// set the maximum fraction beyond which further hits are ignored.
 JPC_API void JPC_BroadPhaseCastCollector_UpdateEarlyOutFraction(JPC_BroadPhaseCastCollector* self, float inFraction);
 
-// geometry types for BroadPhaseQuery
+/// oriented (non-axis-aligned) bounding box for overlap queries.
 typedef struct {
-	JPC_Mat44 Orientation;
+	JPC_Mat44 Orientation;  ///< rotation and center position
 	JPC_Vec3  HalfExtents;
 } JPC_OrientedBox;
 
+/// an axis-aligned box swept along a direction.
 typedef struct {
 	JPC_AABox Box;
 	JPC_Vec3  Direction;
