@@ -939,7 +939,7 @@ public:
 		[[maybe_unused]] JPH::ColorArg inColor = JPH::Color::sWhite,
 		[[maybe_unused]] float inHeight = 0.5f) override
 	{
-		// TODO
+		// no-op: std::string_view cannot be bridged to C without allocation; excluded from JPC_DebugRendererSimpleFns
 	}
 
 private:
