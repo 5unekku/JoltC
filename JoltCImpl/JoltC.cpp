@@ -2202,6 +2202,12 @@ JPC_API void JPC_BodyCreationSettings_default(JPC_BodyCreationSettings* settings
 	// MassPropertiesOverride
 }
 
+JPC_API JPC_BodyCreationSettings* JPC_BodyCreationSettings_new() {
+	auto* settings = new JPC_BodyCreationSettings{};
+	JPC_BodyCreationSettings_default(settings);
+	return settings;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Body
 

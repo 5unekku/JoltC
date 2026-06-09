@@ -45,3 +45,13 @@ jobs:
     - name: Run Hello World
       shell: bash
       run: ./build/HelloWorld
+
+  completeness:
+    runs-on: ubuntu-latest
+    name: API Completeness
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Check all declared functions are implemented
+      run: python3 check_completeness.py
