@@ -1119,7 +1119,9 @@ JPC_API float JPC_SixDOFConstraint_GetLimitsMax(const JPC_SixDOFConstraint* self
 	return to_jph(self)->GetLimitsMax((JPH::SixDOFConstraint::EAxis)inAxis);
 }
 
-JPC_API bool JPC_SixDOFConstraint_IsFreeAxis(const JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis);
+JPC_API bool JPC_SixDOFConstraint_IsFreeAxis(const JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis) {
+	return to_jph(self)->IsFreeAxis((JPH::SixDOFConstraint::EAxis)inAxis);
+}
 
 JPC_API void JPC_SixDOFConstraint_SetMaxFriction(JPC_SixDOFConstraint* self, JPC_SixDOFConstraint_Axis inAxis, float inFriction) {
 	to_jph(self)->SetMaxFriction((JPH::SixDOFConstraint::EAxis)inAxis, inFriction);
