@@ -68,6 +68,9 @@
 #include <Jolt/Physics/Vehicle/VehicleAntiRollBar.h>
 #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
 #include <Jolt/Physics/SoftBody/SoftBodySharedSettings.h>
+#include <Jolt/Physics/SoftBody/SoftBodyContactListener.h>
+#include <Jolt/Physics/SoftBody/SoftBodyManifold.h>
+#include <Jolt/Physics/SoftBody/SoftBodyVertex.h>
 #include <Jolt/Physics/StateRecorder.h>
 #include <Jolt/Physics/StateRecorderImpl.h>
 #include <Jolt/Physics/Ragdoll/Ragdoll.h>
@@ -5908,5 +5911,579 @@ JPC_API JPC_RMat44 JPC_VehicleConstraint_GetWheelWorldTransform(const JPC_Vehicl
 		JPH::Vec3(inWheelUp.x, inWheelUp.y, inWheelUp.z));
 	JPC_RMat44 out;
 	memcpy(&out, &result, sizeof(JPC_RMat44));
+	return out;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PhysicsSettings get/set
+
+JPC_API JPC_PhysicsSettings JPC_PhysicsSystem_GetPhysicsSettings(const JPC_PhysicsSystem* self) {
+	const JPH::PhysicsSettings& s = to_jph(self)->GetPhysicsSettings();
+	JPC_PhysicsSettings out;
+	out.MaxInFlightBodyPairs             = s.mMaxInFlightBodyPairs;
+	out.StepListenersBatchSize           = s.mStepListenersBatchSize;
+	out.StepListenerBatchesPerJob        = s.mStepListenerBatchesPerJob;
+	out.Baumgarte                        = s.mBaumgarte;
+	out.SpeculativeContactDistance       = s.mSpeculativeContactDistance;
+	out.PenetrationSlop                  = s.mPenetrationSlop;
+	out.LinearCastThreshold              = s.mLinearCastThreshold;
+	out.LinearCastMaxPenetration         = s.mLinearCastMaxPenetration;
+	out.ManifoldTolerance                = s.mManifoldTolerance;
+	out.MaxPenetrationDistance           = s.mMaxPenetrationDistance;
+	out.BodyPairCacheMaxDeltaPositionSq  = s.mBodyPairCacheMaxDeltaPositionSq;
+	out.BodyPairCacheCosMaxDeltaRotationDiv2 = s.mBodyPairCacheCosMaxDeltaRotationDiv2;
+	out.ContactNormalCosMaxDeltaRotation = s.mContactNormalCosMaxDeltaRotation;
+	out.ContactPointPreserveLambdaMaxDistSq = s.mContactPointPreserveLambdaMaxDistSq;
+	out.NumVelocitySteps                 = s.mNumVelocitySteps;
+	out.NumPositionSteps                 = s.mNumPositionSteps;
+	out.MinVelocityForRestitution        = s.mMinVelocityForRestitution;
+	out.TimeBeforeSleep                  = s.mTimeBeforeSleep;
+	out.PointVelocitySleepThreshold      = s.mPointVelocitySleepThreshold;
+	out.DeterministicSimulation          = s.mDeterministicSimulation;
+	out.ConstraintWarmStart              = s.mConstraintWarmStart;
+	out.UseBodyPairContactCache          = s.mUseBodyPairContactCache;
+	out.UseManifoldReduction             = s.mUseManifoldReduction;
+	out.UseLargeIslandSplitter           = s.mUseLargeIslandSplitter;
+	out.AllowSleeping                    = s.mAllowSleeping;
+	out.CheckActiveEdges                 = s.mCheckActiveEdges;
+	return out;
+}
+
+JPC_API void JPC_PhysicsSystem_SetPhysicsSettings(JPC_PhysicsSystem* self, JPC_PhysicsSettings in) {
+	JPH::PhysicsSettings s;
+	s.mMaxInFlightBodyPairs             = in.MaxInFlightBodyPairs;
+	s.mStepListenersBatchSize           = in.StepListenersBatchSize;
+	s.mStepListenerBatchesPerJob        = in.StepListenerBatchesPerJob;
+	s.mBaumgarte                        = in.Baumgarte;
+	s.mSpeculativeContactDistance       = in.SpeculativeContactDistance;
+	s.mPenetrationSlop                  = in.PenetrationSlop;
+	s.mLinearCastThreshold              = in.LinearCastThreshold;
+	s.mLinearCastMaxPenetration         = in.LinearCastMaxPenetration;
+	s.mManifoldTolerance                = in.ManifoldTolerance;
+	s.mMaxPenetrationDistance           = in.MaxPenetrationDistance;
+	s.mBodyPairCacheMaxDeltaPositionSq  = in.BodyPairCacheMaxDeltaPositionSq;
+	s.mBodyPairCacheCosMaxDeltaRotationDiv2 = in.BodyPairCacheCosMaxDeltaRotationDiv2;
+	s.mContactNormalCosMaxDeltaRotation = in.ContactNormalCosMaxDeltaRotation;
+	s.mContactPointPreserveLambdaMaxDistSq = in.ContactPointPreserveLambdaMaxDistSq;
+	s.mNumVelocitySteps                 = in.NumVelocitySteps;
+	s.mNumPositionSteps                 = in.NumPositionSteps;
+	s.mMinVelocityForRestitution        = in.MinVelocityForRestitution;
+	s.mTimeBeforeSleep                  = in.TimeBeforeSleep;
+	s.mPointVelocitySleepThreshold      = in.PointVelocitySleepThreshold;
+	s.mDeterministicSimulation          = in.DeterministicSimulation;
+	s.mConstraintWarmStart              = in.ConstraintWarmStart;
+	s.mUseBodyPairContactCache          = in.UseBodyPairContactCache;
+	s.mUseManifoldReduction             = in.UseManifoldReduction;
+	s.mUseLargeIslandSplitter           = in.UseLargeIslandSplitter;
+	s.mAllowSleeping                    = in.AllowSleeping;
+	s.mCheckActiveEdges                 = in.CheckActiveEdges;
+	to_jph(self)->SetPhysicsSettings(s);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// BodyStats getter
+
+JPC_API JPC_BodyStats JPC_PhysicsSystem_GetBodyStats(const JPC_PhysicsSystem* self) {
+	JPH::BodyManager::BodyStats s = to_jph(self)->GetBodyStats();
+	JPC_BodyStats out;
+	out.NumBodies               = s.mNumBodies;
+	out.MaxBodies               = s.mMaxBodies;
+	out.NumBodiesStatic         = s.mNumBodiesStatic;
+	out.NumBodiesDynamic        = s.mNumBodiesDynamic;
+	out.NumActiveBodiesDynamic  = s.mNumActiveBodiesDynamic;
+	out.NumBodiesKinematic      = s.mNumBodiesKinematic;
+	out.NumActiveBodiesKinematic = s.mNumActiveBodiesKinematic;
+	out.NumSoftBodies           = s.mNumSoftBodies;
+	out.NumActiveSoftBodies     = s.mNumActiveSoftBodies;
+	return out;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PhysicsSystem batch constraint / no-lock interfaces / misc
+
+JPC_API void JPC_PhysicsSystem_AddConstraints(JPC_PhysicsSystem* self, JPC_Constraint** inConstraints, int inNumber) {
+	to_jph(self)->AddConstraints(reinterpret_cast<JPH::Constraint**>(inConstraints), inNumber);
+}
+
+JPC_API void JPC_PhysicsSystem_RemoveConstraints(JPC_PhysicsSystem* self, JPC_Constraint** inConstraints, int inNumber) {
+	to_jph(self)->RemoveConstraints(reinterpret_cast<JPH::Constraint**>(inConstraints), inNumber);
+}
+
+JPC_API const JPC_BodyInterface* JPC_PhysicsSystem_GetBodyInterfaceNoLock(const JPC_PhysicsSystem* self) {
+	return to_jpc(&to_jph(self)->GetBodyInterfaceNoLock());
+}
+
+JPC_API JPC_BodyInterface* JPC_PhysicsSystem_GetBodyInterfaceNoLockMut(JPC_PhysicsSystem* self) {
+	return to_jpc(&to_jph(self)->GetBodyInterfaceNoLock());
+}
+
+JPC_API const JPC_NarrowPhaseQuery* JPC_PhysicsSystem_GetNarrowPhaseQueryNoLock(const JPC_PhysicsSystem* self) {
+	return to_jpc(&to_jph(self)->GetNarrowPhaseQueryNoLock());
+}
+
+JPC_API const JPC_BodyLockInterface* JPC_PhysicsSystem_GetBodyLockInterfaceNoLock(const JPC_PhysicsSystem* self) {
+	return to_jpc(&to_jph(self)->GetBodyLockInterfaceNoLock());
+}
+
+JPC_API bool JPC_PhysicsSystem_WereBodiesInContact(const JPC_PhysicsSystem* self, JPC_BodyID inBody1ID, JPC_BodyID inBody2ID) {
+	return to_jph(self)->WereBodiesInContact(JPH::BodyID(inBody1ID), JPH::BodyID(inBody2ID));
+}
+
+JPC_API JPC_AABox JPC_PhysicsSystem_GetBounds(const JPC_PhysicsSystem* self) {
+	JPH::AABox box = to_jph(self)->GetBounds();
+	JPC_AABox out;
+	memcpy(&out, &box, sizeof(JPC_AABox));
+	return out;
+}
+
+JPC_API void JPC_PhysicsSystem_DrawConstraintLimits(JPC_PhysicsSystem* self, JPC_DebugRendererSimple* inRenderer) {
+#ifdef JPH_DEBUG_RENDERER
+	to_jph(self)->DrawConstraintLimits(to_jph(inRenderer));
+#else
+	(void)self; (void)inRenderer;
+#endif
+}
+
+JPC_API void JPC_PhysicsSystem_DrawConstraintReferenceFrame(JPC_PhysicsSystem* self, JPC_DebugRendererSimple* inRenderer) {
+#ifdef JPH_DEBUG_RENDERER
+	to_jph(self)->DrawConstraintReferenceFrame(to_jph(inRenderer));
+#else
+	(void)self; (void)inRenderer;
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// BodyActivationListener vtable bridge
+
+class JPC_BodyActivationListenerBridge;
+OPAQUE_WRAPPER(JPC_BodyActivationListener, JPC_BodyActivationListenerBridge)
+
+class JPC_BodyActivationListenerBridge final : public JPH::BodyActivationListener {
+public:
+	explicit JPC_BodyActivationListenerBridge(void* self, JPC_BodyActivationListenerFns fns) : self(self), fns(fns) {}
+
+	void OnBodyActivated(const JPH::BodyID& inBodyID, JPH::uint64 inBodyUserData) override {
+		if (fns.OnBodyActivated)
+			fns.OnBodyActivated(self, inBodyID.GetIndexAndSequenceNumber(), inBodyUserData);
+	}
+
+	void OnBodyDeactivated(const JPH::BodyID& inBodyID, JPH::uint64 inBodyUserData) override {
+		if (fns.OnBodyDeactivated)
+			fns.OnBodyDeactivated(self, inBodyID.GetIndexAndSequenceNumber(), inBodyUserData);
+	}
+
+private:
+	void* self;
+	JPC_BodyActivationListenerFns fns;
+};
+
+DESTRUCTOR(JPC_BodyActivationListener)
+
+JPC_API JPC_BodyActivationListener* JPC_BodyActivationListener_new(void* self, JPC_BodyActivationListenerFns fns) {
+	return to_jpc(new JPC_BodyActivationListenerBridge(self, fns));
+}
+
+JPC_API void JPC_PhysicsSystem_SetBodyActivationListener(JPC_PhysicsSystem* self, JPC_BodyActivationListener* inListener) {
+	to_jph(self)->SetBodyActivationListener(to_jph(inListener));
+}
+
+JPC_API JPC_BodyActivationListener* JPC_PhysicsSystem_GetBodyActivationListener(const JPC_PhysicsSystem* self) {
+	return to_jpc(static_cast<JPC_BodyActivationListenerBridge*>(to_jph(self)->GetBodyActivationListener()));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// CombineFunction
+// Jolt requires a non-capturing plain function pointer. We store the user
+// callback in globals and bridge through static trampoline functions.
+// This works correctly for single-system usage and for multiple systems
+// as long as they all use the same combine function (the common case).
+
+static JPC_CombineFunction g_combine_friction_fn     = nullptr;
+static JPC_CombineFunction g_combine_restitution_fn  = nullptr;
+
+static float CombineFrictionBridge(const JPH::Body& b1, const JPH::SubShapeID& ss1, const JPH::Body& b2, const JPH::SubShapeID& ss2) {
+	return g_combine_friction_fn(to_jpc(&b1), ss1.GetValue(), to_jpc(&b2), ss2.GetValue());
+}
+
+static float CombineRestitutionBridge(const JPH::Body& b1, const JPH::SubShapeID& ss1, const JPH::Body& b2, const JPH::SubShapeID& ss2) {
+	return g_combine_restitution_fn(to_jpc(&b1), ss1.GetValue(), to_jpc(&b2), ss2.GetValue());
+}
+
+JPC_API void JPC_PhysicsSystem_SetCombineFriction(JPC_PhysicsSystem* self, JPC_CombineFunction inCombineFriction) {
+	g_combine_friction_fn = inCombineFriction;
+	to_jph(self)->SetCombineFriction(inCombineFriction ? CombineFrictionBridge : nullptr);
+}
+
+JPC_API void JPC_PhysicsSystem_SetCombineRestitution(JPC_PhysicsSystem* self, JPC_CombineFunction inCombineRestitution) {
+	g_combine_restitution_fn = inCombineRestitution;
+	to_jph(self)->SetCombineRestitution(inCombineRestitution ? CombineRestitutionBridge : nullptr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SoftBodyContactListener vtable bridge
+
+class JPC_SoftBodyContactListenerBridge;
+OPAQUE_WRAPPER(JPC_SoftBodyContactListener, JPC_SoftBodyContactListenerBridge)
+OPAQUE_WRAPPER(JPC_SoftBodyManifold, JPH::SoftBodyManifold)
+
+class JPC_SoftBodyContactListenerBridge final : public JPH::SoftBodyContactListener {
+public:
+	explicit JPC_SoftBodyContactListenerBridge(void* self, JPC_SoftBodyContactListenerFns fns) : self(self), fns(fns) {}
+
+	JPH::SoftBodyValidateResult OnSoftBodyContactValidate(const JPH::Body& inSoftBody, const JPH::Body& inOtherBody, JPH::SoftBodyContactSettings& ioSettings) override {
+		if (!fns.OnSoftBodyContactValidate)
+			return JPH::SoftBodyValidateResult::AcceptContact;
+		JPC_SoftBodyContactSettings cs;
+		cs.InvMassScale1   = ioSettings.mInvMassScale1;
+		cs.InvMassScale2   = ioSettings.mInvMassScale2;
+		cs.InvInertiaScale2 = ioSettings.mInvInertiaScale2;
+		cs.IsSensor        = ioSettings.mIsSensor;
+		uint32_t result = fns.OnSoftBodyContactValidate(self, to_jpc(&inSoftBody), to_jpc(&inOtherBody), &cs);
+		ioSettings.mInvMassScale1   = cs.InvMassScale1;
+		ioSettings.mInvMassScale2   = cs.InvMassScale2;
+		ioSettings.mInvInertiaScale2 = cs.InvInertiaScale2;
+		ioSettings.mIsSensor        = cs.IsSensor;
+		return result == JPC_SOFT_BODY_VALIDATE_REJECT_CONTACT
+			? JPH::SoftBodyValidateResult::RejectContact
+			: JPH::SoftBodyValidateResult::AcceptContact;
+	}
+
+	void OnSoftBodyContactAdded(const JPH::Body& inSoftBody, const JPH::SoftBodyManifold& inManifold) override {
+		if (fns.OnSoftBodyContactAdded)
+			fns.OnSoftBodyContactAdded(self, to_jpc(&inSoftBody), to_jpc(&inManifold));
+	}
+
+private:
+	void* self;
+	JPC_SoftBodyContactListenerFns fns;
+};
+
+DESTRUCTOR(JPC_SoftBodyContactListener)
+
+JPC_API JPC_SoftBodyContactListener* JPC_SoftBodyContactListener_new(void* self, JPC_SoftBodyContactListenerFns fns) {
+	return to_jpc(new JPC_SoftBodyContactListenerBridge(self, fns));
+}
+
+JPC_API void JPC_PhysicsSystem_SetSoftBodyContactListener(JPC_PhysicsSystem* self, JPC_SoftBodyContactListener* inListener) {
+	to_jph(self)->SetSoftBodyContactListener(to_jph(inListener));
+}
+
+JPC_API JPC_SoftBodyContactListener* JPC_PhysicsSystem_GetSoftBodyContactListener(const JPC_PhysicsSystem* self) {
+	return to_jpc(static_cast<JPC_SoftBodyContactListenerBridge*>(to_jph(self)->GetSoftBodyContactListener()));
+}
+
+// SoftBodyManifold accessors
+JPC_API JPC_BodyID JPC_SoftBodyManifold_GetBodyID(const JPC_SoftBodyManifold* self) {
+	// return the body ID of the first vertex that has a contact, or invalid if none
+	const JPH::SoftBodyManifold& m = *to_jph(self);
+	for (const JPH::SoftBodyVertex& v : m.GetVertices()) {
+		if (m.HasContact(v))
+			return m.GetContactBodyID(v).GetIndexAndSequenceNumber();
+	}
+	return JPH::BodyID().GetIndexAndSequenceNumber();
+}
+
+JPC_API uint32_t JPC_SoftBodyManifold_GetNumVertices(const JPC_SoftBodyManifold* self) {
+	return static_cast<uint32_t>(to_jph(self)->GetVertices().size());
+}
+
+JPC_API bool JPC_SoftBodyManifold_VertexHasContact(const JPC_SoftBodyManifold* self, uint32_t inVertexIndex) {
+	const auto& verts = to_jph(self)->GetVertices();
+	if (inVertexIndex >= verts.size())
+		return false;
+	return to_jph(self)->HasContact(verts[inVertexIndex]);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// BodyInterface missing methods
+
+JPC_API bool JPC_BodyInterface_IsSensor(const JPC_BodyInterface* self, JPC_BodyID inBodyID) {
+	return to_jph(self)->IsSensor(JPH::BodyID(inBodyID));
+}
+
+JPC_API void JPC_BodyInterface_SetIsSensor(JPC_BodyInterface* self, JPC_BodyID inBodyID, bool inIsSensor) {
+	to_jph(self)->SetIsSensor(JPH::BodyID(inBodyID), inIsSensor);
+}
+
+JPC_API float JPC_BodyInterface_GetMaxLinearVelocity(const JPC_BodyInterface* self, JPC_BodyID inBodyID) {
+	return to_jph(self)->GetMaxLinearVelocity(JPH::BodyID(inBodyID));
+}
+
+JPC_API void JPC_BodyInterface_SetMaxLinearVelocity(JPC_BodyInterface* self, JPC_BodyID inBodyID, float inMaxLinearVelocity) {
+	to_jph(self)->SetMaxLinearVelocity(JPH::BodyID(inBodyID), inMaxLinearVelocity);
+}
+
+JPC_API float JPC_BodyInterface_GetMaxAngularVelocity(const JPC_BodyInterface* self, JPC_BodyID inBodyID) {
+	return to_jph(self)->GetMaxAngularVelocity(JPH::BodyID(inBodyID));
+}
+
+JPC_API void JPC_BodyInterface_SetMaxAngularVelocity(JPC_BodyInterface* self, JPC_BodyID inBodyID, float inMaxAngularVelocity) {
+	to_jph(self)->SetMaxAngularVelocity(JPH::BodyID(inBodyID), inMaxAngularVelocity);
+}
+
+JPC_API void JPC_BodyInterface_ResetSleepTimer(JPC_BodyInterface* self, JPC_BodyID inBodyID) {
+	to_jph(self)->ResetSleepTimer(JPH::BodyID(inBodyID));
+}
+
+JPC_API JPC_CollisionGroup JPC_BodyInterface_GetCollisionGroup(const JPC_BodyInterface* self, JPC_BodyID inBodyID) {
+	JPH::CollisionGroup g = to_jph(self)->GetCollisionGroup(JPH::BodyID(inBodyID));
+	JPC_CollisionGroup out;
+	static_assert(sizeof(JPC_CollisionGroup) == sizeof(JPH::CollisionGroup));
+	memcpy(&out, &g, sizeof(out));
+	return out;
+}
+
+JPC_API void JPC_BodyInterface_SetCollisionGroup(JPC_BodyInterface* self, JPC_BodyID inBodyID, const JPC_CollisionGroup* inGroup) {
+	JPH::CollisionGroup g;
+	memcpy(&g, inGroup, sizeof(g));
+	to_jph(self)->SetCollisionGroup(JPH::BodyID(inBodyID), g);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Character missing methods
+
+JPC_API void JPC_Character_AddImpulse(JPC_Character* self, JPC_Vec3 inImpulse) {
+	to_jph(self)->AddImpulse(JPH::Vec3(inImpulse.x, inImpulse.y, inImpulse.z));
+}
+
+JPC_API void JPC_Character_GetPositionAndRotation(const JPC_Character* self, JPC_RVec3* outPosition, JPC_Quat* outRotation, bool inLockBodies) {
+	JPH::RVec3 pos;
+	JPH::Quat  rot;
+	to_jph(self)->GetPositionAndRotation(pos, rot, inLockBodies);
+	*outPosition = { pos.GetX(), pos.GetY(), pos.GetZ() };
+	*outRotation = { rot.GetX(), rot.GetY(), rot.GetZ(), rot.GetW() };
+}
+
+JPC_API void JPC_Character_SetLinearAndAngularVelocity(JPC_Character* self, JPC_Vec3 inLinearVelocity, JPC_Vec3 inAngularVelocity, bool inLockBodies) {
+	to_jph(self)->SetLinearAndAngularVelocity(
+		JPH::Vec3(inLinearVelocity.x,  inLinearVelocity.y,  inLinearVelocity.z),
+		JPH::Vec3(inAngularVelocity.x, inAngularVelocity.y, inAngularVelocity.z),
+		inLockBodies);
+}
+
+JPC_API JPC_RMat44 JPC_Character_GetWorldTransform(const JPC_Character* self, bool inLockBodies) {
+	JPH::RMat44 m = to_jph(self)->GetWorldTransform(inLockBodies);
+	JPC_RMat44 out;
+	memcpy(&out, &m, sizeof(JPC_RMat44));
+	return out;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Ragdoll missing methods
+
+JPC_API void JPC_Ragdoll_SetLinearAndAngularVelocity(JPC_Ragdoll* self, JPC_Vec3 inLinearVelocity, JPC_Vec3 inAngularVelocity, bool inLockBodies) {
+	to_jph(self)->SetLinearAndAngularVelocity(
+		JPH::Vec3(inLinearVelocity.x,  inLinearVelocity.y,  inLinearVelocity.z),
+		JPH::Vec3(inAngularVelocity.x, inAngularVelocity.y, inAngularVelocity.z),
+		inLockBodies);
+}
+
+JPC_API JPC_AABox JPC_Ragdoll_GetWorldSpaceBounds(const JPC_Ragdoll* self, bool inLockBodies) {
+	JPH::AABox box = to_jph(self)->GetWorldSpaceBounds(inLockBodies);
+	JPC_AABox out;
+	memcpy(&out, &box, sizeof(JPC_AABox));
+	return out;
+}
+
+JPC_API void JPC_Ragdoll_GetRootTransform(const JPC_Ragdoll* self, JPC_RVec3* outPosition, JPC_Quat* outRotation, bool inLockBodies) {
+	JPH::RVec3 pos;
+	JPH::Quat  rot;
+	to_jph(self)->GetRootTransform(pos, rot, inLockBodies);
+	*outPosition = { pos.GetX(), pos.GetY(), pos.GetZ() };
+	*outRotation = { rot.GetX(), rot.GetY(), rot.GetZ(), rot.GetW() };
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// VehicleConstraint additional methods
+
+JPC_API JPC_Body* JPC_VehicleConstraint_GetVehicleBody(const JPC_VehicleConstraint* self) {
+	return to_jpc(to_jph(self)->GetVehicleBody());
+}
+
+JPC_API float JPC_VehicleConstraint_GetMaxPitchRollAngle(const JPC_VehicleConstraint* self) {
+	return to_jph(self)->GetMaxPitchRollAngle();
+}
+
+JPC_API void JPC_VehicleConstraint_SetMaxPitchRollAngle(JPC_VehicleConstraint* self, float inMaxPitchRollAngle) {
+	to_jph(self)->SetMaxPitchRollAngle(inMaxPitchRollAngle);
+}
+
+JPC_API uint JPC_VehicleConstraint_GetNumStepsBetweenCollisionTestActive(const JPC_VehicleConstraint* self) {
+	return to_jph(self)->GetNumStepsBetweenCollisionTestActive();
+}
+
+JPC_API void JPC_VehicleConstraint_SetNumStepsBetweenCollisionTestActive(JPC_VehicleConstraint* self, uint inNumSteps) {
+	to_jph(self)->SetNumStepsBetweenCollisionTestActive(inNumSteps);
+}
+
+JPC_API uint JPC_VehicleConstraint_GetNumStepsBetweenCollisionTestInactive(const JPC_VehicleConstraint* self) {
+	return to_jph(self)->GetNumStepsBetweenCollisionTestInactive();
+}
+
+JPC_API void JPC_VehicleConstraint_SetNumStepsBetweenCollisionTestInactive(JPC_VehicleConstraint* self, uint inNumSteps) {
+	to_jph(self)->SetNumStepsBetweenCollisionTestInactive(inNumSteps);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// BroadPhaseQuery
+
+#include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
+#include <Jolt/Physics/Collision/AABoxCast.h>
+#include <Jolt/Geometry/OrientedBox.h>
+
+OPAQUE_WRAPPER(JPC_BroadPhaseQuery, JPH::BroadPhaseQuery)
+
+// --- BodyIDCollector bridge ---
+
+class JPC_BodyIDCollectorBridge;
+OPAQUE_WRAPPER(JPC_BodyIDCollector, JPC_BodyIDCollectorBridge)
+
+class JPC_BodyIDCollectorBridge final : public JPH::CollisionCollector<JPH::BodyID, JPH::CollisionCollectorTraitsCollideShape> {
+public:
+	explicit JPC_BodyIDCollectorBridge(void* self, JPC_BodyIDCollectorFns fns) : self(self), fns(fns) {}
+
+	void Reset() override {
+		JPH::CollisionCollector<JPH::BodyID, JPH::CollisionCollectorTraitsCollideShape>::Reset();
+		if (fns.Reset) fns.Reset(self);
+	}
+
+	void AddHit(const JPH::BodyID& bodyId) override {
+		if (fns.AddHit) fns.AddHit(self, bodyId.GetIndexAndSequenceNumber());
+	}
+
+private:
+	void* self;
+	JPC_BodyIDCollectorFns fns;
+};
+
+DESTRUCTOR(JPC_BodyIDCollector)
+
+JPC_API JPC_BodyIDCollector* JPC_BodyIDCollector_new(void* self, JPC_BodyIDCollectorFns fns) {
+	return to_jpc(new JPC_BodyIDCollectorBridge(self, fns));
+}
+
+// --- BroadPhaseCastCollector bridge ---
+
+class JPC_BroadPhaseCastCollectorBridge;
+OPAQUE_WRAPPER(JPC_BroadPhaseCastCollector, JPC_BroadPhaseCastCollectorBridge)
+
+class JPC_BroadPhaseCastCollectorBridge final : public JPH::CollisionCollector<JPH::BroadPhaseCastResult, JPH::CollisionCollectorTraitsCastRay> {
+public:
+	explicit JPC_BroadPhaseCastCollectorBridge(void* self, JPC_BroadPhaseCastCollectorFns fns) : self(self), fns(fns) {}
+
+	void Reset() override {
+		JPH::CollisionCollector<JPH::BroadPhaseCastResult, JPH::CollisionCollectorTraitsCastRay>::Reset();
+		if (fns.Reset) fns.Reset(self);
+	}
+
+	void AddHit(const JPH::BroadPhaseCastResult& result) override {
+		JPC_BroadPhaseCastResult r;
+		r.BodyID   = result.mBodyID.GetIndexAndSequenceNumber();
+		r.Fraction = result.mFraction;
+		JPC_BroadPhaseCastCollector* base = to_jpc(this);
+		if (fns.AddHit) fns.AddHit(self, base, &r);
+	}
+
+private:
+	void* self;
+	JPC_BroadPhaseCastCollectorFns fns;
+};
+
+DESTRUCTOR(JPC_BroadPhaseCastCollector)
+
+JPC_API JPC_BroadPhaseCastCollector* JPC_BroadPhaseCastCollector_new(void* self, JPC_BroadPhaseCastCollectorFns fns) {
+	return to_jpc(new JPC_BroadPhaseCastCollectorBridge(self, fns));
+}
+
+JPC_API void JPC_BroadPhaseCastCollector_UpdateEarlyOutFraction(JPC_BroadPhaseCastCollector* self, float inFraction) {
+	to_jph(self)->UpdateEarlyOutFraction(inFraction);
+}
+
+// --- BroadPhaseQuery methods ---
+
+JPC_API const JPC_BroadPhaseQuery* JPC_PhysicsSystem_GetBroadPhaseQuery(const JPC_PhysicsSystem* self) {
+	return to_jpc(&to_jph(self)->GetBroadPhaseQuery());
+}
+
+// helper to get a const reference to a filter from nullable pointer
+static const JPH::BroadPhaseLayerFilter& bpl_filter_ref(const JPC_BroadPhaseLayerFilter* p) {
+	static const JPH::BroadPhaseLayerFilter sDefault{};
+	return p ? *to_jph(p) : sDefault;
+}
+
+static const JPH::ObjectLayerFilter& ol_filter_ref(const JPC_ObjectLayerFilter* p) {
+	static const JPH::ObjectLayerFilter sDefault{};
+	return p ? *to_jph(p) : sDefault;
+}
+
+JPC_API void JPC_BroadPhaseQuery_CastRay(const JPC_BroadPhaseQuery* self, JPC_Vec3 inOrigin, JPC_Vec3 inDirection, JPC_BroadPhaseCastCollector* ioCollector, const JPC_BroadPhaseLayerFilter* inBPLayerFilter, const JPC_ObjectLayerFilter* inOLFilter) {
+	to_jph(self)->CastRay(
+		JPH::RayCast{ JPH::Vec3(inOrigin.x, inOrigin.y, inOrigin.z), JPH::Vec3(inDirection.x, inDirection.y, inDirection.z) },
+		*to_jph(ioCollector),
+		bpl_filter_ref(inBPLayerFilter),
+		ol_filter_ref(inOLFilter));
+}
+
+JPC_API void JPC_BroadPhaseQuery_CollideAABox(const JPC_BroadPhaseQuery* self, const JPC_AABox* inBox, JPC_BodyIDCollector* ioCollector, const JPC_BroadPhaseLayerFilter* inBPLayerFilter, const JPC_ObjectLayerFilter* inOLFilter) {
+	JPH::AABox box;
+	memcpy(&box, inBox, sizeof(JPH::AABox));
+	to_jph(self)->CollideAABox(box, *to_jph(ioCollector), bpl_filter_ref(inBPLayerFilter), ol_filter_ref(inOLFilter));
+}
+
+JPC_API void JPC_BroadPhaseQuery_CollideSphere(const JPC_BroadPhaseQuery* self, JPC_Vec3 inCenter, float inRadius, JPC_BodyIDCollector* ioCollector, const JPC_BroadPhaseLayerFilter* inBPLayerFilter, const JPC_ObjectLayerFilter* inOLFilter) {
+	to_jph(self)->CollideSphere(
+		JPH::Vec3(inCenter.x, inCenter.y, inCenter.z), inRadius,
+		*to_jph(ioCollector),
+		bpl_filter_ref(inBPLayerFilter),
+		ol_filter_ref(inOLFilter));
+}
+
+JPC_API void JPC_BroadPhaseQuery_CollidePoint(const JPC_BroadPhaseQuery* self, JPC_Vec3 inPoint, JPC_BodyIDCollector* ioCollector, const JPC_BroadPhaseLayerFilter* inBPLayerFilter, const JPC_ObjectLayerFilter* inOLFilter) {
+	to_jph(self)->CollidePoint(
+		JPH::Vec3(inPoint.x, inPoint.y, inPoint.z),
+		*to_jph(ioCollector),
+		bpl_filter_ref(inBPLayerFilter),
+		ol_filter_ref(inOLFilter));
+}
+
+JPC_API void JPC_BroadPhaseQuery_CollideOrientedBox(const JPC_BroadPhaseQuery* self, const JPC_OrientedBox* inBox, JPC_BodyIDCollector* ioCollector, const JPC_BroadPhaseLayerFilter* inBPLayerFilter, const JPC_ObjectLayerFilter* inOLFilter) {
+	JPH::Mat44 orient;
+	memcpy(&orient, &inBox->Orientation, sizeof(JPH::Mat44));
+	JPH::OrientedBox box(orient, JPH::Vec3(inBox->HalfExtents.x, inBox->HalfExtents.y, inBox->HalfExtents.z));
+	to_jph(self)->CollideOrientedBox(box, *to_jph(ioCollector), bpl_filter_ref(inBPLayerFilter), ol_filter_ref(inOLFilter));
+}
+
+// CastAABox needs CastShapeBodyCollector (TraitsCastShape), not TraitsCastRay.
+// Adapt by wrapping the user's bridge in a local TraitsCastShape collector.
+class JPC_BroadPhaseCastAABoxCollectorAdapter : public JPH::CastShapeBodyCollector {
+public:
+	explicit JPC_BroadPhaseCastAABoxCollectorAdapter(JPC_BroadPhaseCastCollectorBridge& wrapped)
+		: mWrapped(wrapped) {}
+
+	void Reset() override {
+		JPH::CastShapeBodyCollector::Reset();
+		mWrapped.Reset();
+	}
+
+	void AddHit(const JPH::BroadPhaseCastResult& result) override {
+		mWrapped.AddHit(result);
+	}
+
+private:
+	JPC_BroadPhaseCastCollectorBridge& mWrapped;
+};
+
+JPC_API void JPC_BroadPhaseQuery_CastAABox(const JPC_BroadPhaseQuery* self, const JPC_AABoxCast* inBox, JPC_BroadPhaseCastCollector* ioCollector, const JPC_BroadPhaseLayerFilter* inBPLayerFilter, const JPC_ObjectLayerFilter* inOLFilter) {
+	JPH::AABox box;
+	memcpy(&box, &inBox->Box, sizeof(JPH::AABox));
+	JPH::AABoxCast cast{ box, JPH::Vec3(inBox->Direction.x, inBox->Direction.y, inBox->Direction.z) };
+	JPC_BroadPhaseCastAABoxCollectorAdapter adapter(*to_jph(ioCollector));
+	to_jph(self)->CastAABox(cast, adapter, bpl_filter_ref(inBPLayerFilter), ol_filter_ref(inOLFilter));
+}
+
+JPC_API JPC_AABox JPC_BroadPhaseQuery_GetBounds(const JPC_BroadPhaseQuery* self) {
+	JPH::AABox box = to_jph(self)->GetBounds();
+	JPC_AABox out;
+	memcpy(&out, &box, sizeof(JPC_AABox));
 	return out;
 }
