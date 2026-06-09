@@ -261,6 +261,16 @@ typedef struct JPC_CollideShapeResult {
 
 typedef struct JPC_Body JPC_Body;
 
+/// axis-aligned bounding box defined by min and max corners.
+typedef struct JPC_AABox {
+	JPC_Vec3 Min;
+	JPC_Vec3 Max;
+} JPC_AABox;
+
+// forward declarations for opaque types used by Body before they are fully defined
+typedef struct JPC_MotionProperties JPC_MotionProperties;
+typedef struct JPC_TransformedShape JPC_TransformedShape;
+
 ////////////////////////////////////////////////////////////////////////////////
 // VertexList == Array<Float3> == std::vector<Float3>
 
@@ -781,8 +791,8 @@ JPC_API void JPC_Constraint_Release(const JPC_Constraint* self);
 
 JPC_API void JPC_Constraint_delete(JPC_Constraint* self);
 
-// JPC_API JPC_ConstraintType JPC_Constraint_GetType(const JPC_Constraint* self);
-// JPC_API JPC_ConstraintSubType JPC_Constraint_GetSubType(const JPC_Constraint* self);
+JPC_API JPC_ConstraintType JPC_Constraint_GetType(const JPC_Constraint* self);
+JPC_API JPC_ConstraintSubType JPC_Constraint_GetSubType(const JPC_Constraint* self);
 
 JPC_API uint32_t JPC_Constraint_GetConstraintPriority(const JPC_Constraint* self);
 JPC_API void JPC_Constraint_SetConstraintPriority(JPC_Constraint* self, uint32_t inPriority);
@@ -1451,20 +1461,20 @@ JPC_API JPC_RVec3 JPC_Body_GetCenterOfMassPosition(const JPC_Body* self);
 JPC_API JPC_RMat44 JPC_Body_GetCenterOfMassTransform(const JPC_Body* self);
 JPC_API JPC_RMat44 JPC_Body_GetInverseCenterOfMassTransform(const JPC_Body* self);
 
-// JPC_API const AABox & JPC_Body_GetWorldSpaceBounds(const JPC_Body* self);
-// JPC_API const MotionProperties *JPC_Body_GetMotionProperties(const JPC_Body* self)
-// JPC_API MotionProperties * JPC_Body_GetMotionProperties(JPC_Body* self);
-// JPC_API const MotionProperties *JPC_Body_GetMotionPropertiesUnchecked(const JPC_Body* self)
-// JPC_API MotionProperties * JPC_Body_GetMotionPropertiesUnchecked(JPC_Body* self);
+/// world-space AABB enclosing the body.
+JPC_API JPC_AABox JPC_Body_GetWorldSpaceBounds(const JPC_Body* self);
+/// motion properties for dynamic/kinematic bodies — null for static bodies.
+JPC_API JPC_MotionProperties* JPC_Body_GetMotionProperties(JPC_Body* self);
+/// like GetMotionProperties but skips the assertion that the body is dynamic/kinematic.
+JPC_API JPC_MotionProperties* JPC_Body_GetMotionPropertiesUnchecked(JPC_Body* self);
 
 JPC_API uint64_t JPC_Body_GetUserData(const JPC_Body* self);
 JPC_API void JPC_Body_SetUserData(JPC_Body* self, uint64_t inUserData);
 
 JPC_API JPC_Vec3 JPC_Body_GetWorldSpaceSurfaceNormal(const JPC_Body* self, JPC_SubShapeID inSubShapeID, JPC_RVec3 inPosition);
 
-// JPC_API TransformedShape JPC_Body_GetTransformedShape(const JPC_Body* self);
-// JPC_API BodyCreationSettings JPC_Body_GetBodyCreationSettings(const JPC_Body* self);
-// JPC_API SoftBodyCreationSettings JPC_Body_GetSoftBodyCreationSettings(const JPC_Body* self);
+/// heap-allocated snapshot of the body's transform + shape — caller must free with JPC_TransformedShape_delete.
+JPC_API JPC_TransformedShape* JPC_Body_GetTransformedShape(const JPC_Body* self);
 
 ////////////////////////////////////////////////////////////////////////////////
 // BodyLockInterface
@@ -1613,7 +1623,8 @@ JPC_API float JPC_BodyInterface_GetGravityFactor(const JPC_BodyInterface *self, 
 JPC_API void JPC_BodyInterface_SetUseManifoldReduction(JPC_BodyInterface *self, JPC_BodyID inBodyID, bool inUseReduction);
 JPC_API bool JPC_BodyInterface_GetUseManifoldReduction(const JPC_BodyInterface *self, JPC_BodyID inBodyID);
 
-// TransformedShape JPC_BodyInterface_GetTransformedShape(const JPC_BodyInterface *self, JPC_BodyID inBodyID);
+/// heap-allocated transformed shape for a body — caller must free with JPC_TransformedShape_delete.
+JPC_API JPC_TransformedShape* JPC_BodyInterface_GetTransformedShape(const JPC_BodyInterface* self, JPC_BodyID inBodyID);
 
 JPC_API uint64_t JPC_BodyInterface_GetUserData(const JPC_BodyInterface *self, JPC_BodyID inBodyID);
 JPC_API void JPC_BodyInterface_SetUserData(const JPC_BodyInterface *self, JPC_BodyID inBodyID, uint64_t inUserData);
@@ -1976,13 +1987,60 @@ typedef struct JPC_CharacterVirtual_SetShapeArgs {
 JPC_API bool JPC_CharacterVirtual_SetShape(JPC_CharacterVirtual* self, JPC_CharacterVirtual_SetShapeArgs* args);
 
 ////////////////////////////////////////////////////////////////////////////////
-// AABox
+// MotionProperties
 
-/// axis-aligned bounding box defined by min and max corners.
-typedef struct JPC_AABox {
-	JPC_Vec3 Min;
-	JPC_Vec3 Max;
-} JPC_AABox;
+/// opaque handle to a body's motion properties (only valid for dynamic/kinematic bodies).
+///
+/// See also: Jolt's [`MotionProperties`](https://jrouwe.github.io/JoltPhysicsDocs/5.5.0/class_motion_properties.html) class.
+typedef struct JPC_MotionProperties JPC_MotionProperties;
+
+JPC_API JPC_MotionQuality JPC_MotionProperties_GetMotionQuality(const JPC_MotionProperties* self);
+JPC_API JPC_AllowedDOFs JPC_MotionProperties_GetAllowedDOFs(const JPC_MotionProperties* self);
+
+JPC_API JPC_Vec3 JPC_MotionProperties_GetLinearVelocity(const JPC_MotionProperties* self);
+JPC_API void JPC_MotionProperties_SetLinearVelocity(JPC_MotionProperties* self, JPC_Vec3 inVelocity);
+JPC_API void JPC_MotionProperties_SetLinearVelocityClamped(JPC_MotionProperties* self, JPC_Vec3 inVelocity);
+
+JPC_API JPC_Vec3 JPC_MotionProperties_GetAngularVelocity(const JPC_MotionProperties* self);
+JPC_API void JPC_MotionProperties_SetAngularVelocity(JPC_MotionProperties* self, JPC_Vec3 inVelocity);
+JPC_API void JPC_MotionProperties_SetAngularVelocityClamped(JPC_MotionProperties* self, JPC_Vec3 inVelocity);
+
+JPC_API float JPC_MotionProperties_GetMaxLinearVelocity(const JPC_MotionProperties* self);
+JPC_API void JPC_MotionProperties_SetMaxLinearVelocity(JPC_MotionProperties* self, float inVelocity);
+JPC_API float JPC_MotionProperties_GetMaxAngularVelocity(const JPC_MotionProperties* self);
+JPC_API void JPC_MotionProperties_SetMaxAngularVelocity(JPC_MotionProperties* self, float inVelocity);
+
+JPC_API float JPC_MotionProperties_GetLinearDamping(const JPC_MotionProperties* self);
+JPC_API void JPC_MotionProperties_SetLinearDamping(JPC_MotionProperties* self, float inDamping);
+JPC_API float JPC_MotionProperties_GetAngularDamping(const JPC_MotionProperties* self);
+JPC_API void JPC_MotionProperties_SetAngularDamping(JPC_MotionProperties* self, float inDamping);
+
+JPC_API float JPC_MotionProperties_GetGravityFactor(const JPC_MotionProperties* self);
+JPC_API void JPC_MotionProperties_SetGravityFactor(JPC_MotionProperties* self, float inFactor);
+
+/// inverse mass (1/mass); 0 for a kinematic or static body.
+JPC_API float JPC_MotionProperties_GetInverseMass(const JPC_MotionProperties* self);
+/// inverse mass without the dynamic-body assertion.
+JPC_API float JPC_MotionProperties_GetInverseMassUnchecked(const JPC_MotionProperties* self);
+JPC_API void JPC_MotionProperties_SetInverseMass(JPC_MotionProperties* self, float inInverseMass);
+
+////////////////////////////////////////////////////////////////////////////////
+// TransformedShape
+
+/// heap-allocated snapshot of a body's shape + world transform.
+///
+/// See also: Jolt's [`TransformedShape`](https://jrouwe.github.io/JoltPhysicsDocs/5.5.0/struct_transformed_shape.html) struct.
+typedef struct JPC_TransformedShape JPC_TransformedShape;
+
+JPC_API void JPC_TransformedShape_delete(JPC_TransformedShape* self);
+
+JPC_API JPC_BodyID JPC_TransformedShape_GetBodyID(const JPC_TransformedShape* self);
+JPC_API const JPC_Shape* JPC_TransformedShape_GetShape(const JPC_TransformedShape* self);
+JPC_API JPC_Vec3 JPC_TransformedShape_GetShapeScale(const JPC_TransformedShape* self);
+JPC_API JPC_RMat44 JPC_TransformedShape_GetCenterOfMassTransform(const JPC_TransformedShape* self);
+JPC_API JPC_RMat44 JPC_TransformedShape_GetInverseCenterOfMassTransform(const JPC_TransformedShape* self);
+JPC_API JPC_RMat44 JPC_TransformedShape_GetWorldTransform(const JPC_TransformedShape* self);
+JPC_API JPC_AABox JPC_TransformedShape_GetWorldSpaceBounds(const JPC_TransformedShape* self);
 
 ////////////////////////////////////////////////////////////////////////////////
 // HeightFieldShapeSettings -> ShapeSettings

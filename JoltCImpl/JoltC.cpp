@@ -983,8 +983,13 @@ JPC_API void JPC_Constraint_delete(JPC_Constraint* self) {
 	delete to_jph(self);
 }
 
-// JPC_API JPC_ConstraintType JPC_Constraint_GetType(const JPC_Constraint* self);
-// JPC_API JPC_ConstraintSubType JPC_Constraint_GetSubType(const JPC_Constraint* self);
+JPC_API JPC_ConstraintType JPC_Constraint_GetType(const JPC_Constraint* self) {
+	return (JPC_ConstraintType)to_jph(self)->GetType();
+}
+
+JPC_API JPC_ConstraintSubType JPC_Constraint_GetSubType(const JPC_Constraint* self) {
+	return (JPC_ConstraintSubType)to_jph(self)->GetSubType();
+}
 
 JPC_API uint32_t JPC_Constraint_GetConstraintPriority(const JPC_Constraint* self) {
 	return to_jph(self)->GetConstraintPriority();
@@ -2468,11 +2473,21 @@ JPC_API JPC_RMat44 JPC_Body_GetInverseCenterOfMassTransform(const JPC_Body* self
 	return to_jpc(to_jph(self)->GetInverseCenterOfMassTransform());
 }
 
-// JPC_API const AABox & JPC_Body_GetWorldSpaceBounds(const JPC_Body* self);
-// JPC_API const MotionProperties *JPC_Body_GetMotionProperties(const JPC_Body* self)
-// JPC_API MotionProperties * JPC_Body_GetMotionProperties(JPC_Body* self);
-// JPC_API const MotionProperties *JPC_Body_GetMotionPropertiesUnchecked(const JPC_Body* self)
-// JPC_API MotionProperties * JPC_Body_GetMotionPropertiesUnchecked(JPC_Body* self);
+JPC_API JPC_AABox JPC_Body_GetWorldSpaceBounds(const JPC_Body* self) {
+	const JPH::AABox& box = to_jph(self)->GetWorldSpaceBounds();
+	JPC_AABox result;
+	result.Min = to_jpc(box.mMin);
+	result.Max = to_jpc(box.mMax);
+	return result;
+}
+
+JPC_API JPC_MotionProperties* JPC_Body_GetMotionProperties(JPC_Body* self) {
+	return reinterpret_cast<JPC_MotionProperties*>(to_jph(self)->GetMotionProperties());
+}
+
+JPC_API JPC_MotionProperties* JPC_Body_GetMotionPropertiesUnchecked(JPC_Body* self) {
+	return reinterpret_cast<JPC_MotionProperties*>(to_jph(self)->GetMotionPropertiesUnchecked());
+}
 
 JPC_API uint64_t JPC_Body_GetUserData(const JPC_Body* self) {
 	return to_jph(self)->GetUserData();
@@ -2488,9 +2503,9 @@ JPC_API JPC_Vec3 JPC_Body_GetWorldSpaceSurfaceNormal(const JPC_Body* self, JPC_S
 	return to_jpc(to_jph(self)->GetWorldSpaceSurfaceNormal(jph_id, to_jph(inPosition)));
 }
 
-// JPC_API TransformedShape JPC_Body_GetTransformedShape(const JPC_Body* self);
-// JPC_API BodyCreationSettings JPC_Body_GetBodyCreationSettings(const JPC_Body* self);
-// JPC_API SoftBodyCreationSettings JPC_Body_GetSoftBodyCreationSettings(const JPC_Body* self);
+JPC_API JPC_TransformedShape* JPC_Body_GetTransformedShape(const JPC_Body* self) {
+	return reinterpret_cast<JPC_TransformedShape*>(new JPH::TransformedShape(to_jph(self)->GetTransformedShape()));
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // BodyLockRead
@@ -2884,7 +2899,9 @@ JPC_API bool JPC_BodyInterface_GetUseManifoldReduction(const JPC_BodyInterface *
 	return to_jph(self)->GetUseManifoldReduction(to_jph(inBodyID));
 }
 
-// TransformedShape JPC_BodyInterface_GetTransformedShape(const JPC_BodyInterface *self, JPC_BodyID inBodyID);
+JPC_API JPC_TransformedShape* JPC_BodyInterface_GetTransformedShape(const JPC_BodyInterface* self, JPC_BodyID inBodyID) {
+	return reinterpret_cast<JPC_TransformedShape*>(new JPH::TransformedShape(to_jph(self)->GetTransformedShape(to_jph(inBodyID))));
+}
 
 JPC_API uint64_t JPC_BodyInterface_GetUserData(const JPC_BodyInterface *self, JPC_BodyID inBodyID) {
 	return to_jph(self)->GetUserData(to_jph(inBodyID));
@@ -6485,5 +6502,145 @@ JPC_API JPC_AABox JPC_BroadPhaseQuery_GetBounds(const JPC_BroadPhaseQuery* self)
 	JPH::AABox box = to_jph(self)->GetBounds();
 	JPC_AABox out;
 	memcpy(&out, &box, sizeof(JPC_AABox));
+	return out;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// MotionProperties
+
+static inline JPH::MotionProperties* to_jph(JPC_MotionProperties* self) {
+	return reinterpret_cast<JPH::MotionProperties*>(self);
+}
+static inline const JPH::MotionProperties* to_jph(const JPC_MotionProperties* self) {
+	return reinterpret_cast<const JPH::MotionProperties*>(self);
+}
+
+JPC_API JPC_MotionQuality JPC_MotionProperties_GetMotionQuality(const JPC_MotionProperties* self) {
+	return (JPC_MotionQuality)to_jph(self)->GetMotionQuality();
+}
+
+JPC_API JPC_AllowedDOFs JPC_MotionProperties_GetAllowedDOFs(const JPC_MotionProperties* self) {
+	return (JPC_AllowedDOFs)to_jph(self)->GetAllowedDOFs();
+}
+
+JPC_API JPC_Vec3 JPC_MotionProperties_GetLinearVelocity(const JPC_MotionProperties* self) {
+	return to_jpc(to_jph(self)->GetLinearVelocity());
+}
+
+JPC_API void JPC_MotionProperties_SetLinearVelocity(JPC_MotionProperties* self, JPC_Vec3 inVelocity) {
+	to_jph(self)->SetLinearVelocity(to_jph(inVelocity));
+}
+
+JPC_API void JPC_MotionProperties_SetLinearVelocityClamped(JPC_MotionProperties* self, JPC_Vec3 inVelocity) {
+	to_jph(self)->SetLinearVelocityClamped(to_jph(inVelocity));
+}
+
+JPC_API JPC_Vec3 JPC_MotionProperties_GetAngularVelocity(const JPC_MotionProperties* self) {
+	return to_jpc(to_jph(self)->GetAngularVelocity());
+}
+
+JPC_API void JPC_MotionProperties_SetAngularVelocity(JPC_MotionProperties* self, JPC_Vec3 inVelocity) {
+	to_jph(self)->SetAngularVelocity(to_jph(inVelocity));
+}
+
+JPC_API void JPC_MotionProperties_SetAngularVelocityClamped(JPC_MotionProperties* self, JPC_Vec3 inVelocity) {
+	to_jph(self)->SetAngularVelocityClamped(to_jph(inVelocity));
+}
+
+JPC_API float JPC_MotionProperties_GetMaxLinearVelocity(const JPC_MotionProperties* self) {
+	return to_jph(self)->GetMaxLinearVelocity();
+}
+
+JPC_API void JPC_MotionProperties_SetMaxLinearVelocity(JPC_MotionProperties* self, float inVelocity) {
+	to_jph(self)->SetMaxLinearVelocity(inVelocity);
+}
+
+JPC_API float JPC_MotionProperties_GetMaxAngularVelocity(const JPC_MotionProperties* self) {
+	return to_jph(self)->GetMaxAngularVelocity();
+}
+
+JPC_API void JPC_MotionProperties_SetMaxAngularVelocity(JPC_MotionProperties* self, float inVelocity) {
+	to_jph(self)->SetMaxAngularVelocity(inVelocity);
+}
+
+JPC_API float JPC_MotionProperties_GetLinearDamping(const JPC_MotionProperties* self) {
+	return to_jph(self)->GetLinearDamping();
+}
+
+JPC_API void JPC_MotionProperties_SetLinearDamping(JPC_MotionProperties* self, float inDamping) {
+	to_jph(self)->SetLinearDamping(inDamping);
+}
+
+JPC_API float JPC_MotionProperties_GetAngularDamping(const JPC_MotionProperties* self) {
+	return to_jph(self)->GetAngularDamping();
+}
+
+JPC_API void JPC_MotionProperties_SetAngularDamping(JPC_MotionProperties* self, float inDamping) {
+	to_jph(self)->SetAngularDamping(inDamping);
+}
+
+JPC_API float JPC_MotionProperties_GetGravityFactor(const JPC_MotionProperties* self) {
+	return to_jph(self)->GetGravityFactor();
+}
+
+JPC_API void JPC_MotionProperties_SetGravityFactor(JPC_MotionProperties* self, float inFactor) {
+	to_jph(self)->SetGravityFactor(inFactor);
+}
+
+JPC_API float JPC_MotionProperties_GetInverseMass(const JPC_MotionProperties* self) {
+	return to_jph(self)->GetInverseMass();
+}
+
+JPC_API float JPC_MotionProperties_GetInverseMassUnchecked(const JPC_MotionProperties* self) {
+	return to_jph(self)->GetInverseMassUnchecked();
+}
+
+JPC_API void JPC_MotionProperties_SetInverseMass(JPC_MotionProperties* self, float inInverseMass) {
+	to_jph(self)->SetInverseMass(inInverseMass);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// TransformedShape
+
+static inline JPH::TransformedShape* to_jph(JPC_TransformedShape* self) {
+	return reinterpret_cast<JPH::TransformedShape*>(self);
+}
+static inline const JPH::TransformedShape* to_jph(const JPC_TransformedShape* self) {
+	return reinterpret_cast<const JPH::TransformedShape*>(self);
+}
+
+JPC_API void JPC_TransformedShape_delete(JPC_TransformedShape* self) {
+	delete to_jph(self);
+}
+
+JPC_API JPC_BodyID JPC_TransformedShape_GetBodyID(const JPC_TransformedShape* self) {
+	return to_jpc(to_jph(self)->mBodyID);
+}
+
+JPC_API const JPC_Shape* JPC_TransformedShape_GetShape(const JPC_TransformedShape* self) {
+	return to_jpc(to_jph(self)->mShape.GetPtr());
+}
+
+JPC_API JPC_Vec3 JPC_TransformedShape_GetShapeScale(const JPC_TransformedShape* self) {
+	return to_jpc(to_jph(self)->GetShapeScale());
+}
+
+JPC_API JPC_RMat44 JPC_TransformedShape_GetCenterOfMassTransform(const JPC_TransformedShape* self) {
+	return to_jpc(to_jph(self)->GetCenterOfMassTransform());
+}
+
+JPC_API JPC_RMat44 JPC_TransformedShape_GetInverseCenterOfMassTransform(const JPC_TransformedShape* self) {
+	return to_jpc(to_jph(self)->GetInverseCenterOfMassTransform());
+}
+
+JPC_API JPC_RMat44 JPC_TransformedShape_GetWorldTransform(const JPC_TransformedShape* self) {
+	return to_jpc(to_jph(self)->GetWorldTransform());
+}
+
+JPC_API JPC_AABox JPC_TransformedShape_GetWorldSpaceBounds(const JPC_TransformedShape* self) {
+	JPH::AABox box = to_jph(self)->GetWorldSpaceBounds();
+	JPC_AABox out;
+	out.Min = to_jpc(box.mMin);
+	out.Max = to_jpc(box.mMax);
 	return out;
 }
